@@ -160,7 +160,7 @@ def train(epoch, loader, model, criterion, optimizer, args):
         loss.backward()
         optimizer.step()
 
-        batch = epoch * len(loader) + i
+        batch = epoch * len(loader) + i + 1
         if batch % args.log_interval == 0:
             all_reduce(loss)
             loss /= args.world_size
@@ -187,7 +187,7 @@ def validate(epoch, loader, model, criterion, args):
     all_reduce(loss)
     loss /= len(loader) * args.world_size
     if args.rank == 0:
-        args.logger.add_scalar('loss/val', loss.item(), global_step=epoch)
+        args.logger.add_scalar('loss/val', loss.item(), global_step=epoch+1)
 
 #   f'max GPU mem: {torch.cuda.max_memory_allocated()} allocated, {torch.cuda.max_memory_cached()} cached')
 
