@@ -5,7 +5,7 @@ import torch.nn as nn
 class ConvBlock(nn.Module):
     """Convolution blocks of the form specified by `seq`.
     """
-    def __init__(self, in_channels, out_channels, mid_channels=None, seq='CBAC'):
+    def __init__(self, in_channels, out_channels, mid_channels=None, seq='CBA'):
         super().__init__()
 
         self.in_channels = in_channels
@@ -34,7 +34,7 @@ class ConvBlock(nn.Module):
         elif l == 'B':
             return nn.BatchNorm3d(self.bn_channels)
         elif l == 'A':
-            return nn.LeakyReLU(inplace=True)
+            return nn.PReLU()
         else:
             raise NotImplementedError('layer type {} not supported'.format(l))
 
@@ -53,6 +53,26 @@ class ConvBlock(nn.Module):
 
     def forward(self, x):
         return self.convs(x)
+
+
+class ResBlock(ConvBlock):
+    """Residual convolution blocks of the form specified by `seq`. Input is
+    added to the residual followed by an activation.
+    """
+    def __init__(self, channels, seq='CBACB'):
+        super().__init__(in_channels=channels, out_channels=channels, seq=seq)
+
+        self.act = nn.PReLU()
+
+    def forward(self, x):
+        y = x
+
+        x = self.convs(x)
+
+        y = narrow_like(y, x)
+        x += y
+
+        return self.act(x)
 
 
 def narrow_like(a, b):
