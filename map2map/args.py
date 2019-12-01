@@ -21,11 +21,22 @@ def add_common_args(parser):
     parser.add_argument('--out-channels', type=int, required=True,
             help='number of output or target channels')
     parser.add_argument('--norms', type=str_list, help='comma-sep. list '
-            'of normalization functions from map2map.data.norms')
+            'of normalization functions from data.norms')
     parser.add_argument('--criterion', default='MSELoss',
             help='model criterion from torch.nn')
     parser.add_argument('--load-state', default='', type=str,
             help='path to load model, optimizer, rng, etc.')
+    parser.add_argument('--batches', default=1, type=int,
+             help='mini-batch size, per GPU in training or in total in testing')
+    parser.add_argument('--loader-workers', default=0, type=int,
+            help='number of data loading workers, per GPU in training or '
+            'in total in testing')
+    parser.add_argument('--pad-or-crop', default=0, type=int_tuple,
+            help='pad (>0) or crop (<0) the input data; '
+            'can be a int or a 6-tuple (by a comma-sep. list); '
+            'can be asymmetric to align the data with downsample '
+            'and upsample convolutions; '
+            'padding assumes periodic boundary condition')
 
 
 def add_train_args(parser):
@@ -39,12 +50,8 @@ def add_train_args(parser):
             help='comma-sep. list of glob patterns for validation input data')
     parser.add_argument('--val-tgt-patterns', type=str_list, required=True,
             help='comma-sep. list of glob patterns for validation target data')
-    parser.add_argument('--epochs', default=128, type=int,
+    parser.add_argument('--epochs', default=1024, type=int,
             help='total number of epochs to run')
-    parser.add_argument('--batches-per-gpu', default=8, type=int,
-             help='mini-batch size per GPU')
-    parser.add_argument('--loader-workers-per-gpu', default=4, type=int,
-            help='number of data loading workers per GPU')
     parser.add_argument('--augment', action='store_true',
             help='enable training data augmentation')
     parser.add_argument('--optimizer', default='Adam',
@@ -74,3 +81,13 @@ def add_test_args(parser):
 
 def str_list(s):
     return s.split(',')
+
+
+def int_tuple(t):
+    t = t.split(',')
+    t = tuple(int(i) for i in t)
+    if len(t) == 1:
+        t = t[0]
+    elif len(t) != 6:
+        raise ValueError('pad or crop size must be int or 6-tuple')
+    return t

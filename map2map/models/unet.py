@@ -4,15 +4,6 @@ import torch.nn as nn
 from .conv import ConvBlock, ResBlock, narrow_like
 
 
-class DownBlock(ConvBlock):
-    def __init__(self, in_channels, out_channels, seq='BADBA'):
-        super().__init__(in_channels, out_channels, seq=seq)
-
-class UpBlock(ConvBlock):
-    def __init__(self, in_channels, out_channels, seq='BAUBA'):
-        super().__init__(in_channels, out_channels, seq=seq)
-
-
 class UNet(nn.Module):
     def __init__(self, in_channels, out_channels):
         super().__init__()

@@ -10,4 +10,4 @@ def main():
     if args.mode == 'train':
         train.node_worker(args)
     elif args.mode == 'test':
-        pass
+        test.test(args)

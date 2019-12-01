@@ -1,6 +1,5 @@
 import os
 import shutil
-
 import torch
 from torch.multiprocessing import spawn
 from torch.distributed import init_process_group, destroy_process_group, all_reduce
@@ -46,15 +45,16 @@ def gpu_worker(local_rank, args):
         in_patterns=args.train_in_patterns,
         tgt_patterns=args.train_tgt_patterns,
         augment=args.augment,
-        normalize=args.norms,
+        norms=args.norms,
+        pad_or_crop=args.pad_or_crop,
     )
     train_sampler = DistributedSampler(train_dataset, shuffle=True)
     train_loader = DataLoader(
         train_dataset,
-        batch_size=args.batches_per_gpu,
+        batch_size=args.batches,
         shuffle=False,
         sampler=train_sampler,
-        num_workers=args.loader_workers_per_gpu,
+        num_workers=args.loader_workers,
         pin_memory=True
     )
 
@@ -62,15 +62,16 @@ def gpu_worker(local_rank, args):
         in_patterns=args.val_in_patterns,
         tgt_patterns=args.val_tgt_patterns,
         augment=False,
-        normalize=args.norms,
+        norms=args.norms,
+        pad_or_crop=args.pad_or_crop,
     )
     val_sampler = DistributedSampler(val_dataset, shuffle=False)
     val_loader = DataLoader(
         val_dataset,
-        batch_size=args.batches_per_gpu,
+        batch_size=args.batches,
         shuffle=False,
         sampler=val_sampler,
-        num_workers=args.loader_workers_per_gpu,
+        num_workers=args.loader_workers,
         pin_memory=True
     )
 
@@ -90,17 +91,17 @@ def gpu_worker(local_rank, args):
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer)
 
     if args.load_state:
-        checkpoint = torch.load(args.load_state, map_location=args.device)
-        args.start_epoch = checkpoint['epoch']
-        model.load_state_dict(checkpoint['model'])
-        optimizer.load_state_dict(checkpoint['optimizer'])
-        scheduler.load_state_dict(checkpoint['scheduler'])
-        torch.set_rng_state(checkpoint['rng'].cpu())  # move rng state back
+        state = torch.load(args.load_state, map_location=args.device)
+        args.start_epoch = state['epoch']
+        model.load_state_dict(state['model'])
+        optimizer.load_state_dict(state['optimizer'])
+        scheduler.load_state_dict(state['scheduler'])
+        torch.set_rng_state(state['rng'].cpu())  # move rng state back
         if args.rank == 0:
-            min_loss = checkpoint['min_loss']
-            print('checkpoint of epoch {} loaded from {}'.format(
-                checkpoint['epoch'], args.load_state))
-        del checkpoint
+            min_loss = state['min_loss']
+            print('checkpoint at epoch {} loaded from {}'.format(
+                state['epoch'], args.load_state))
+        del state
     else:
         args.start_epoch = 0
         if args.rank == 0:
@@ -125,7 +126,7 @@ def gpu_worker(local_rank, args):
         if args.rank == 0:
             args.logger.close()
 
-            checkpoint = {
+            state = {
                 'epoch': epoch + 1,
                 'model': model.state_dict(),
                 'optimizer' : optimizer.state_dict(),
@@ -134,8 +135,8 @@ def gpu_worker(local_rank, args):
                 'min_loss': min_loss,
             }
             filename='checkpoint.pth'
-            torch.save(checkpoint, filename)
-            del checkpoint
+            torch.save(state, filename)
+            del state
 
             if min_loss is None or val_loss < min_loss:
                 min_loss = val_loss
@@ -152,7 +153,7 @@ def train(epoch, loader, model, criterion, optimizer, args):
         target = target.to(args.device, non_blocking=True)
 
         output = model(input)
-        target = narrow_like(target, output)
+        target = narrow_like(target, output)  # FIXME pad
 
         loss = criterion(output, target)
 
@@ -167,7 +168,6 @@ def train(epoch, loader, model, criterion, optimizer, args):
             if args.rank == 0:
                 args.logger.add_scalar('loss/train', loss.item(), global_step=batch)
 
-#       f'max GPU mem: {torch.cuda.max_memory_allocated()} allocated, {torch.cuda.max_memory_cached()} cached')
 
 def validate(epoch, loader, model, criterion, args):
     model.eval()
@@ -180,7 +180,7 @@ def validate(epoch, loader, model, criterion, args):
             target = target.to(args.device, non_blocking=True)
 
             output = model(input)
-            target = narrow_like(target, output)
+            target = narrow_like(target, output)  # FIXME pad
 
             loss += criterion(output, target)
 
@@ -188,7 +188,5 @@ def validate(epoch, loader, model, criterion, args):
     loss /= len(loader) * args.world_size
     if args.rank == 0:
         args.logger.add_scalar('loss/val', loss.item(), global_step=epoch+1)
-
-#   f'max GPU mem: {torch.cuda.max_memory_allocated()} allocated, {torch.cuda.max_memory_cached()} cached')
 
     return loss.item()

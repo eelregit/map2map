@@ -3,7 +3,7 @@ import numpy as np
 import torch
 from torch.utils.data import Dataset
 
-from . import norms
+from .norms import import_norm
 
 
 class FieldDataset(Dataset):
@@ -14,12 +14,15 @@ class FieldDataset(Dataset):
     Likewise `tgt_patterns` is for target fields.
     Input and target samples of all fields are matched by sorting the globbed files.
 
+    Input fields can be padded (>0) or cropped (<0) with `pad_or_crop`.
+    Padding assumes periodic boundary condition.
+
     Data augmentations are supported for scalar and vector fields.
 
-    `normalize` can be a list of callables to normalize each field.
+    `norms` can be a list of callables to normalize each field.
     """
-    def __init__(self, in_patterns, tgt_patterns, augment=False,
-            normalize=None, **kwargs):
+    def __init__(self, in_patterns, tgt_patterns, pad_or_crop=0, augment=False,
+            norms=None):
         in_file_lists = [sorted(glob(p)) for p in in_patterns]
         self.in_files = list(zip(* in_file_lists))
 
@@ -29,23 +32,31 @@ class FieldDataset(Dataset):
         assert len(self.in_files) == len(self.tgt_files), \
                 'input and target sample sizes do not match'
 
+        if isinstance(pad_or_crop, int):
+            pad_or_crop = (pad_or_crop,) * 6
+        assert isinstance(pad_or_crop, tuple) and len(pad_or_crop) == 6, \
+                'pad or crop size must be int or 6-tuple'
+        self.pad_or_crop = np.array((0,) * 2 + pad_or_crop).reshape(4, 2)
+
         self.augment = augment
 
-        self.normalize = normalize
-        if self.normalize is not None:
-            assert len(in_patterns) == len(self.normalize), \
+        if norms is not None:
+            assert len(in_patterns) == len(norms), \
                     'numbers of normalization callables and input fields do not match'
-
-#        self.__dict__.update(kwargs)
+            norms = [import_norm(norm) for norm in norms if isinstance(norm, str)]
+        self.norms = norms
 
     def __len__(self):
         return len(self.in_files)
 
     def __getitem__(self, idx):
-        in_fields = [torch.from_numpy(np.load(f)).to(torch.float32)
-                        for f in self.in_files[idx]]
-        tgt_fields = [torch.from_numpy(np.load(f)).to(torch.float32)
-                        for f in self.tgt_files[idx]]
+        in_fields = [np.load(f) for f in self.in_files[idx]]
+        tgt_fields = [np.load(f) for f in self.tgt_files[idx]]
+
+        padcrop(in_fields, self.pad_or_crop)  # with numpy
+
+        in_fields = [torch.from_numpy(f).to(torch.float32) for f in in_fields]
+        tgt_fields = [torch.from_numpy(f).to(torch.float32) for f in tgt_fields]
 
         if self.augment:
             flip_axes = torch.randint(2, (3,), dtype=torch.bool)
@@ -59,18 +70,8 @@ class FieldDataset(Dataset):
             perm3d(in_fields, perm_axes)
             perm3d(tgt_fields, perm_axes)
 
-        if self.normalize is not None:
-            def get_norm(path):
-                path = path.split('.')
-                norm = norms
-                while path:
-                    norm = norm.__dict__[path.pop(0)]
-                return norm
-
-            for norm, ifield, tfield in zip(self.normalize, in_fields, tgt_fields):
-                if isinstance(norm, str):
-                    norm = get_norm(norm)
-
+        if self.norms is not None:
+            for norm, ifield, tfield in zip(self.norms, in_fields, tgt_fields):
                 norm(ifield)
                 norm(tfield)
 
@@ -78,6 +79,22 @@ class FieldDataset(Dataset):
         tgt_fields = torch.cat(tgt_fields, dim=0)
 
         return in_fields, tgt_fields
+
+
+def padcrop(fields, width):
+    for i, x in enumerate(fields):
+        if (width >= 0).all():
+            x = np.pad(x, width, mode='wrap')
+        elif (width <= 0).all():
+            x = x[...,
+                -width[1, 0] : width[1, 1],
+                -width[2, 0] : width[2, 1],
+                -width[3, 0] : width[3, 1],
+            ]
+        else:
+            raise NotImplementedError('mixed pad-and-crop not supported')
+
+        fields[i] = x
 
 
 def flip3d(fields, axes):
@@ -89,6 +106,7 @@ def flip3d(fields, axes):
         x = torch.flip(x, axes)
 
         fields[i] = x
+
 
 def perm3d(fields, axes):
     for i, x in enumerate(fields):

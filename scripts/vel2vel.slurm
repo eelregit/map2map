@@ -11,7 +11,7 @@
 #SBATCH --exclusive
 #SBATCH --nodes=2
 #SBATCH --mem=0
-#SBATCH --time=2-00:00:00
+#SBATCH --time=7-00:00:00
 
 
 hostname; pwd; date
@@ -46,7 +46,7 @@ srun m2m.py train \
     --val-in-patterns "$data_root_dir/$in_dir/$val_dirs/$in_files" \
     --val-tgt-patterns "$data_root_dir/$tgt_dir/$val_dirs/$tgt_files" \
     --in-channels 3 --out-channels 3 --norms cosmology.vel --augment \
-    --epochs 128 --batches-per-gpu 4 --loader-workers-per-gpu 4
+    --epochs 1024 --batches 3 --loader-workers 3 --lr 0.0002
 #    --load-state checkpoint.pth
 
 
