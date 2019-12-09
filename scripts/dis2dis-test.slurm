@@ -15,10 +15,7 @@
 hostname; pwd; date
 
 
-module load gcc openmpi2
-module load cuda/10.1.243_418.87.00 cudnn/v7.6.2-cuda-10.1
-
-source $HOME/anaconda3/bin/activate torch
+module load gcc python3
 
 
 export OMP_NUM_THREADS=$SLURM_CPUS_ON_NODE
@@ -37,7 +34,7 @@ in_files="$files"
 tgt_files="$files"
 
 
-srun m2m.py test \
+m2m.py test \
     --test-in-patterns "$data_root_dir/$in_dir/$test_dirs/$in_files" \
     --test-tgt-patterns "$data_root_dir/$tgt_dir/$test_dirs/$tgt_files" \
     --in-channels 3 --out-channels 3 --norms cosmology.dis \

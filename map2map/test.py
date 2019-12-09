@@ -48,7 +48,7 @@ def test(args):
 
             loss = criterion(output, target)
 
-            print('sample {} loss: {}'.format(i, loss))
+            print('sample {} loss: {}'.format(i, loss.item()))
 
             if args.norms is not None:
                 norm = test_dataset.norms[0]  # FIXME

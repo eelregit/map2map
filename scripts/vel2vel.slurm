@@ -17,10 +17,7 @@
 hostname; pwd; date
 
 
-module load gcc openmpi2
-module load cuda/10.1.243_418.87.00 cudnn/v7.6.2-cuda-10.1
-
-source $HOME/anaconda3/bin/activate torch
+module load gcc python3
 
 
 export MASTER_ADDR=$HOSTNAME
