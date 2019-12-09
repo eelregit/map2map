@@ -80,7 +80,9 @@ def gpu_worker(local_rank, args):
         pin_memory=True
     )
 
-    model = UNet(args.in_channels, args.out_channels)
+    in_channels, out_channels = train_dataset.channels
+
+    model = UNet(in_channels, out_channels)
     model.to(args.device)
     model = DistributedDataParallel(model, device_ids=[args.device])
 

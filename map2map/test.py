@@ -21,7 +21,9 @@ def test(args):
         num_workers=args.loader_workers,
     )
 
-    model = UNet(args.in_channels, args.out_channels)
+    in_channels, out_channels = test_dataset.channels
+
+    model = UNet(in_channels, out_channels)
     criterion = torch.nn.__dict__[args.criterion]()
 
     device = torch.device('cpu')

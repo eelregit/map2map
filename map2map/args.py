@@ -16,10 +16,6 @@ def get_args():
 
 
 def add_common_args(parser):
-    parser.add_argument('--in-channels', type=int, required=True,
-            help='number of input channels')
-    parser.add_argument('--out-channels', type=int, required=True,
-            help='number of output or target channels')
     parser.add_argument('--norms', type=str_list, help='comma-sep. list '
             'of normalization functions from data.norms')
     parser.add_argument('--criterion', default='MSELoss',

@@ -32,6 +32,9 @@ class FieldDataset(Dataset):
         assert len(self.in_files) == len(self.tgt_files), \
                 'input and target sample sizes do not match'
 
+        self.in_channels = sum(np.load(f).shape[0] for f in self.in_files[0])
+        self.tgt_channels = sum(np.load(f).shape[0] for f in self.tgt_files[0])
+
         if isinstance(pad_or_crop, int):
             pad_or_crop = (pad_or_crop,) * 6
         assert isinstance(pad_or_crop, tuple) and len(pad_or_crop) == 6, \
@@ -45,6 +48,10 @@ class FieldDataset(Dataset):
                     'numbers of normalization callables and input fields do not match'
             norms = [import_norm(norm) for norm in norms if isinstance(norm, str)]
         self.norms = norms
+
+    @property
+    def channels(self):
+        return self.in_channels, self.tgt_channels
 
     def __len__(self):
         return len(self.in_files)
