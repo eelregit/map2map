@@ -8,8 +8,9 @@ setup(
     author='Yin Li et al.',
     author_email='eelregit@gmail.com',
     packages=find_packages(),
+    python_requires='>=3',
     install_requires=[
-        'torch==1.1',
+        'torch',
         'numpy',
         'scipy',
         'tensorboard',
