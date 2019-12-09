@@ -1,5 +1,6 @@
 import os
 import shutil
+import random
 import torch
 from torch.multiprocessing import spawn
 from torch.distributed import init_process_group, destroy_process_group, all_reduce
@@ -13,6 +14,8 @@ from .models import UNet, narrow_like
 
 
 def node_worker(args):
+    if args.seed is None:
+        args.seed = random.randint(0, 65535)
     torch.manual_seed(args.seed)  # NOTE: why here not in gpu_worker?
     #torch.backends.cudnn.deterministic = True  # NOTE: test perf
 

@@ -64,7 +64,7 @@ def add_train_args(parser):
 #            help='weight decay')
     parser.add_argument('--dist-backend', default='nccl', type=str,
             choices=['gloo', 'nccl'], help='distributed backend')
-    parser.add_argument('--seed', default=42, type=int,
+    parser.add_argument('--seed', type=int,
             help='seed for initializing training')
     parser.add_argument('--log-interval', default=20, type=int,
             help='interval between logging training loss')
