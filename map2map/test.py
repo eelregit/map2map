@@ -46,8 +46,10 @@ def test(args):
             output = model(input)
             if args.pad_or_crop > 0:  # FIXME
                 output = narrow_like(output, target)
+                input = narrow_like(input, target)
             else:
                 target = narrow_like(target, output)
+                input = narrow_like(input, output)
 
             loss = criterion(output, target)
 
@@ -55,7 +57,9 @@ def test(args):
 
             if args.norms is not None:
                 norm = test_dataset.norms[0]  # FIXME
+                norm(input, undo=True)
                 norm(output, undo=True)
+                norm(target, undo=True)
 
             np.savez('{}.npz'.format(i), input=input.numpy(),
                     output=output.numpy(), target=target.numpy())
