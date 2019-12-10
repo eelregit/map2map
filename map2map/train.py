@@ -10,7 +10,8 @@ from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 
 from .data import FieldDataset
-from .models import UNet, narrow_like
+from . import models
+from .models import narrow_like
 
 
 def node_worker(args):
@@ -82,7 +83,7 @@ def gpu_worker(local_rank, args):
 
     in_channels, out_channels = train_dataset.channels
 
-    model = UNet(in_channels, out_channels)
+    model = models.__dict__[args.model](in_channels, out_channels)
     model.to(args.device)
     model = DistributedDataParallel(model, device_ids=[args.device])
 

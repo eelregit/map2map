@@ -42,7 +42,7 @@ srun m2m.py train \
     --train-tgt-patterns "$data_root_dir/$tgt_dir/$train_dirs/$tgt_files" \
     --val-in-patterns "$data_root_dir/$in_dir/$val_dirs/$in_files" \
     --val-tgt-patterns "$data_root_dir/$tgt_dir/$val_dirs/$tgt_files" \
-    --norms cosmology.vel --augment \
+    --norms cosmology.vel --augment --model VNet \
     --epochs 1024 --batches 3 --loader-workers 3 --lr 0.001
 #    --load-state checkpoint.pth
 

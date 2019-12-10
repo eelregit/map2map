@@ -18,6 +18,7 @@ def get_args():
 def add_common_args(parser):
     parser.add_argument('--norms', type=str_list, help='comma-sep. list '
             'of normalization functions from data.norms')
+    parser.add_argument('--model', required=True, help='model from models')
     parser.add_argument('--criterion', default='MSELoss',
             help='model criterion from torch.nn')
     parser.add_argument('--load-state', default='', type=str,

@@ -1,39 +1,24 @@
 import torch
 import torch.nn as nn
 
-from .conv import ConvBlock, ResBlock, narrow_like
+from .conv import ConvBlock, narrow_like
 
 
 class UNet(nn.Module):
     def __init__(self, in_channels, out_channels):
         super().__init__()
 
-        self.conv_0l = nn.Sequential(
-            ConvBlock(in_channels, 64, seq='CA'),
-            ResBlock(64, seq='CBACBACB'),
-        )
-        self.down_0l = ConvBlock(64, 128, seq='DBA')
-        self.conv_1l = nn.Sequential(
-            ResBlock(128, seq='CBACB'),
-            ResBlock(128, seq='CBACB'),
-        )
-        self.down_1l = ConvBlock(128, 256, seq='DBA')
+        self.conv_0l = ConvBlock(in_channels, 64, seq='CAC')
+        self.down_0l = ConvBlock(64, 64, seq='BADBA')
+        self.conv_1l = ConvBlock(64, 64, seq='CBAC')
+        self.down_1l = ConvBlock(64, 64, seq='BADBA')
 
-        self.conv_2c = nn.Sequential(
-            ResBlock(256, seq='CBACB'),
-            ResBlock(256, seq='CBACB'),
-        )
+        self.conv_2c = ConvBlock(64, 64, seq='CBAC')
 
-        self.up_1r = ConvBlock(256, 128, seq='UBA')
-        self.conv_1r = nn.Sequential(
-            ResBlock(256, seq='CBACB'),
-            ResBlock(256, seq='CBACB'),
-        )
-        self.up_0r = ConvBlock(256, 64, seq='UBA')
-        self.conv_0r = nn.Sequential(
-            ResBlock(128, seq='CBACBAC'),
-            ConvBlock(128, out_channels, seq='C')
-        )
+        self.up_1r = ConvBlock(64, 64, seq='BAUBA')
+        self.conv_1r = ConvBlock(128, 64, seq='CBAC')
+        self.up_0r = ConvBlock(64, 64, seq='BAUBA')
+        self.conv_0r = ConvBlock(128, out_channels, seq='CAC')
 
     def forward(self, x):
         y0 = self.conv_0l(x)
