@@ -94,9 +94,9 @@ def padcrop(fields, width):
             x = np.pad(x, width, mode='wrap')
         elif (width <= 0).all():
             x = x[...,
+                -width[0, 0] : width[0, 1],
                 -width[1, 0] : width[1, 1],
                 -width[2, 0] : width[2, 1],
-                -width[3, 0] : width[3, 1],
             ]
         else:
             raise NotImplementedError('mixed pad-and-crop not supported')
