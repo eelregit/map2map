@@ -1,17 +1,24 @@
 import torch
 import torch.nn as nn
 
+from .swish import Swish
+
 
 class ConvBlock(nn.Module):
     """Convolution blocks of the form specified by `seq`.
     """
-    def __init__(self, in_channels, out_channels, mid_channels=None, seq='CBA'):
+    def __init__(self, in_channels, out_channels=None, mid_channels=None,
+            kernel_size=3, seq='CBA'):
         super().__init__()
+
+        if out_channels is None:
+            out_channels = in_channels
 
         self.in_channels = in_channels
         self.out_channels = out_channels
         if mid_channels is None:
             self.mid_channels = max(in_channels, out_channels)
+        self.kernel_size = kernel_size
 
         self.bn_channels = in_channels
         self.idx_conv = 0
@@ -30,11 +37,11 @@ class ConvBlock(nn.Module):
             return nn.Conv3d(in_channels, out_channels, 2, stride=2)
         elif l == 'C':
             in_channels, out_channels = self._setup_conv()
-            return nn.Conv3d(in_channels, out_channels, 3)
+            return nn.Conv3d(in_channels, out_channels, self.kernel_size)
         elif l == 'B':
             return nn.BatchNorm3d(self.bn_channels)
         elif l == 'A':
-            return nn.PReLU()
+            return Swish()
         else:
             raise NotImplementedError('layer type {} not supported'.format(l))
 
@@ -56,13 +63,16 @@ class ConvBlock(nn.Module):
 
 
 class ResBlock(ConvBlock):
-    """Residual convolution blocks of the form specified by `seq`. Input is
-    added to the residual followed by an activation (trailing `'A'` in `seq`).
+    """Residual convolution blocks of the form specified by `seq`. Input is added
+    to the residual followed by an optional activation (trailing `'A'` in `seq`).
     """
     def __init__(self, in_channels, out_channels=None, mid_channels=None,
             seq='CBACBA'):
+        super().__init__(in_channels, out_channels=out_channels,
+                mid_channels=mid_channels,
+                seq=seq[:-1] if seq[-1] == 'A' else seq)
+
         if out_channels is None:
-            out_channels = in_channels
             self.skip = None
         else:
             self.skip = nn.Conv3d(in_channels, out_channels, 1)
@@ -71,12 +81,10 @@ class ResBlock(ConvBlock):
             raise NotImplementedError('upsample and downsample layers '
                     'not supported yet')
 
-        assert seq[-1] == 'A', 'block must end with activation'
-
-        super().__init__(in_channels, out_channels, mid_channels=mid_channels,
-                seq=seq[:-1])
-
-        self.act = nn.PReLU()
+        if seq[-1] == 'A':
+            self.act = Swish()
+        else:
+            self.act = None
 
     def forward(self, x):
         y = x
@@ -89,7 +97,10 @@ class ResBlock(ConvBlock):
         y = narrow_like(y, x)
         x += y
 
-        return self.act(x)
+        if self.act is not None:
+            x = self.act(x)
+
+        return x
 
 
 def narrow_like(a, b):

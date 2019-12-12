@@ -9,15 +9,15 @@ class UNet(nn.Module):
         super().__init__()
 
         self.conv_0l = ConvBlock(in_channels, 64, seq='CAC')
-        self.down_0l = ConvBlock(64, 64, seq='BADBA')
-        self.conv_1l = ConvBlock(64, 64, seq='CBAC')
-        self.down_1l = ConvBlock(64, 64, seq='BADBA')
+        self.down_0l = ConvBlock(64, seq='BADBA')
+        self.conv_1l = ConvBlock(64, seq='CBAC')
+        self.down_1l = ConvBlock(64, seq='BADBA')
 
-        self.conv_2c = ConvBlock(64, 64, seq='CBAC')
+        self.conv_2c = ConvBlock(64, seq='CBAC')
 
-        self.up_1r = ConvBlock(64, 64, seq='BAUBA')
+        self.up_1r = ConvBlock(64, seq='BAUBA')
         self.conv_1r = ConvBlock(128, 64, seq='CBAC')
-        self.up_0r = ConvBlock(64, 64, seq='BAUBA')
+        self.up_0r = ConvBlock(64, seq='BAUBA')
         self.conv_0r = ConvBlock(128, out_channels, seq='CAC')
 
     def forward(self, x):
