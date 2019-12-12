@@ -57,8 +57,8 @@ def add_train_args(parser):
             help='initial learning rate')
 #    parser.add_argument('--momentum', default=0.9, type=float,
 #            help='momentum')
-#    parser.add_argument('--weight-decay', default=1e-4, type=float,
-#            help='weight decay')
+    parser.add_argument('--weight-decay', default=0., type=float,
+            help='weight decay')
     parser.add_argument('--dist-backend', default='nccl', type=str,
             choices=['gloo', 'nccl'], help='distributed backend')
     parser.add_argument('--seed', type=int,
