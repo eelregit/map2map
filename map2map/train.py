@@ -134,7 +134,7 @@ def gpu_worker(local_rank, args):
 
         if args.rank == 0:
             print(end='', flush=True)
-            args.logger.flush()
+            args.logger.close()
 
             state = {
                 'epoch': epoch + 1,
