@@ -28,12 +28,12 @@ def add_common_args(parser):
     parser.add_argument('--loader-workers', default=0, type=int,
             help='number of data loading workers, per GPU in training or '
             'in total in testing')
-    parser.add_argument('--pad-or-crop', default=0, type=int_tuple,
-            help='pad (>0) or crop (<0) the input data; '
-            'can be a int or a 6-tuple (by a comma-sep. list); '
-            'can be asymmetric to align the data with downsample '
-            'and upsample convolutions; '
-            'padding assumes periodic boundary condition')
+    parser.add_argument('--cache', action='store_true',
+            help='enable caching in field datasets')
+    parser.add_argument('--crop', type=int,
+            help='size to crop the input and target data')
+    parser.add_argument('--pad', default=0, type=int,
+            help='pad the input data assuming periodic boundary condition')
 
 
 def add_train_args(parser):
@@ -80,11 +80,11 @@ def str_list(s):
     return s.split(',')
 
 
-def int_tuple(t):
-    t = t.split(',')
-    t = tuple(int(i) for i in t)
-    if len(t) == 1:
-        t = t[0]
-    elif len(t) != 6:
-        raise ValueError('pad or crop size must be int or 6-tuple')
-    return t
+#def int_tuple(t):
+#    t = t.split(',')
+#    t = tuple(int(i) for i in t)
+#    if len(t) == 1:
+#        t = t[0]
+#    elif len(t) != 6:
+#        raise ValueError('size must be int or 6-tuple')
+#    return t

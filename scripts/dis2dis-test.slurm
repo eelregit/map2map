@@ -29,7 +29,7 @@ tgt_dir="nonlin"
 
 test_dirs="0"  # FIXME
 
-files="dis/128x???.npy"
+files="dis/512x???.npy"
 in_files="$files"
 tgt_files="$files"
 
@@ -37,8 +37,8 @@ tgt_files="$files"
 m2m.py test \
     --test-in-patterns "$data_root_dir/$in_dir/$test_dirs/$in_files" \
     --test-tgt-patterns "$data_root_dir/$tgt_dir/$test_dirs/$tgt_files" \
-    --norms cosmology.dis --model VNet \
-    --batches 1 --loader-workers 0 --pad-or-crop 40 \
+    --norms cosmology.dis --model VNet --cache --crop 128 --pad 50 \
+    --batches 1 --loader-workers 0 \
     --load-state best_model.pth
 
 

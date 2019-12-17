@@ -11,9 +11,11 @@ def test(args):
     test_dataset = FieldDataset(
         in_patterns=args.test_in_patterns,
         tgt_patterns=args.test_tgt_patterns,
+        cache=args.cache,
+        crop=args.crop,
+        pad=args.pad,
         augment=False,
         norms=args.norms,
-        pad_or_crop=args.pad_or_crop,
     )
     test_loader = DataLoader(
         test_dataset,
@@ -44,7 +46,7 @@ def test(args):
     with torch.no_grad():
         for i, (input, target) in enumerate(test_loader):
             output = model(input)
-            if args.pad_or_crop > 0:  # FIXME
+            if args.pad > 0:  # FIXME
                 output = narrow_like(output, target)
                 input = narrow_like(input, target)
             else:
