@@ -96,7 +96,7 @@ def gpu_worker(local_rank, args):
         weight_decay=args.weight_decay,
     )
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer,
-            factor=0.1, verbose=True)
+            factor=0.5, patience=2, verbose=True)
 
     if args.load_state:
         state = torch.load(args.load_state, map_location=args.device)
