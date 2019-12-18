@@ -2,13 +2,11 @@
 
 #SBATCH --job-name=vel2vel-test
 #SBATCH --output=%x-%j.out
-#SBATCH --error=%x-%j.err
 
 #SBATCH --partition=ccm
 
 #SBATCH --exclusive
 #SBATCH --nodes=1
-#SBATCH --mem=0
 #SBATCH --time=1-00:00:00
 
 
@@ -27,9 +25,9 @@ data_root_dir="/mnt/ceph/users/yinli/Quijote"
 in_dir="linear"
 tgt_dir="nonlin"
 
-test_dirs="0"  # FIXME
+test_dirs="*99"
 
-files="vel/512x???.npy"
+files="vel/512x000.npy"
 in_files="$files"
 tgt_files="$files"
 
@@ -37,9 +35,11 @@ tgt_files="$files"
 m2m.py test \
     --test-in-patterns "$data_root_dir/$in_dir/$test_dirs/$in_files" \
     --test-tgt-patterns "$data_root_dir/$tgt_dir/$test_dirs/$tgt_files" \
-    --norms cosmology.vel --model VNet --cache --crop 128 --pad 50 \
+    --norms cosmology.vel --crop 128 --pad 42 \
+    --model VNet \
+    --load-state best_model.pth \
     --batches 1 --loader-workers 0 \
-    --load-state best_model.pth
+    --cache
 
 
 date
