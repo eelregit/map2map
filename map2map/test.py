@@ -8,6 +8,8 @@ from .models import narrow_like
 
 
 def test(args):
+    print(args)
+
     test_dataset = FieldDataset(
         in_patterns=args.test_in_patterns,
         tgt_patterns=args.test_tgt_patterns,
