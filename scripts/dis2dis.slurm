@@ -42,8 +42,9 @@ srun m2m.py train \
     --val-tgt-patterns "$data_root_dir/$tgt_dir/$val_dirs/$tgt_files" \
     --norms cosmology.dis --augment --crop 100 --pad 42 \
     --model VNet \
+    --epochs 128 --lr 0.001 --batches 1 --loader-workers 0 \
+    --cache --div-data
 #    --load-state checkpoint.pth \
-    --epochs 128 --lr 0.001 --batches 1 --loader-workers 0
 
 
 date

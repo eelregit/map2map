@@ -14,15 +14,20 @@ class FieldDataset(Dataset):
     Likewise `tgt_patterns` is for target fields.
     Input and target samples of all fields are matched by sorting the globbed files.
 
-    Input and target fields can be cached, and they can be cropped.
-    Input fields can be padded assuming periodic boundary condition.
+    `norms` can be a list of callables to normalize each field.
 
     Data augmentations are supported for scalar and vector fields.
 
-    `norms` can be a list of callables to normalize each field.
+    Input and target fields can be cropped.
+    Input fields can be padded assuming periodic boundary condition.
+
+    `cache` enables data caching.
+    `div_data` enables data division, useful when combined with caching.
     """
-    def __init__(self, in_patterns, tgt_patterns, cache=False, crop=None, pad=0,
-            augment=False, norms=None):
+    def __init__(self, in_patterns, tgt_patterns,
+            norms=None, augment=False, crop=None, pad=0,
+            cache=False, div_data=False, rank=None, world_size=None,
+            **kwargs):
         in_file_lists = [sorted(glob(p)) for p in in_patterns]
         self.in_files = list(zip(* in_file_lists))
 
@@ -32,6 +37,11 @@ class FieldDataset(Dataset):
         assert len(self.in_files) == len(self.tgt_files), \
                 'input and target sample sizes do not match'
 
+        if div_data:
+            files = len(self.in_files) // world_size
+            self.in_files = self.in_files[rank * files : (rank + 1) * files]
+            self.tgt_files = self.tgt_files[rank * files : (rank + 1) * files]
+
         self.in_channels = sum(np.load(f).shape[0] for f in self.in_files[0])
         self.tgt_channels = sum(np.load(f).shape[0] for f in self.tgt_files[0])
 
@@ -39,13 +49,15 @@ class FieldDataset(Dataset):
         self.size = np.asarray(self.size)
         self.ndim = len(self.size)
 
-        self.cache = cache
-        if self.cache:
-            self.in_fields = []
-            self.tgt_fields = []
-            for idx in range(len(self.in_files)):
-                self.in_fields.append([np.load(f) for f in self.in_files[idx]])
-                self.tgt_fields.append([np.load(f) for f in self.tgt_files[idx]])
+        if norms is not None:  # FIXME: in_norms, tgt_norms
+            assert len(in_patterns) == len(norms), \
+                    'numbers of normalization callables and input fields do not match'
+            norms = [import_norm(norm) for norm in norms if isinstance(norm, str)]
+        self.norms = norms
+
+        self.augment = augment
+        if self.ndim == 1 and self.augment:
+            raise ValueError('cannot augment 1D fields')
 
         if crop is None:
             self.crop = self.size
@@ -58,15 +70,13 @@ class FieldDataset(Dataset):
         assert isinstance(pad, int), 'only support symmetric padding for now'
         self.pad = np.broadcast_to(pad, (self.ndim, 2))
 
-        self.augment = augment
-        if self.ndim == 1 and self.augment:
-            raise ValueError('cannot augment 1D fields')
-
-        if norms is not None:  # FIXME: in_norms, tgt_norms
-            assert len(in_patterns) == len(norms), \
-                    'numbers of normalization callables and input fields do not match'
-            norms = [import_norm(norm) for norm in norms if isinstance(norm, str)]
-        self.norms = norms
+        self.cache = cache
+        if self.cache:
+            self.in_fields = []
+            self.tgt_fields = []
+            for idx in range(len(self.in_files)):
+                self.in_fields.append([np.load(f) for f in self.in_files[idx]])
+                self.tgt_fields.append([np.load(f) for f in self.tgt_files[idx]])
 
     def __len__(self):
         return len(self.in_files) * self.tot_reps

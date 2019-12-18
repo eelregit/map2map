@@ -18,22 +18,25 @@ def get_args():
 def add_common_args(parser):
     parser.add_argument('--norms', type=str_list, help='comma-sep. list '
             'of normalization functions from data.norms')
+    parser.add_argument('--crop', type=int,
+            help='size to crop the input and target data')
+    parser.add_argument('--pad', default=0, type=int,
+            help='pad the input data assuming periodic boundary condition')
+
     parser.add_argument('--model', required=True, help='model from models')
     parser.add_argument('--criterion', default='MSELoss',
             help='model criterion from torch.nn')
     parser.add_argument('--load-state', default='', type=str,
             help='path to load model, optimizer, rng, etc.')
+
     parser.add_argument('--batches', default=1, type=int,
              help='mini-batch size, per GPU in training or in total in testing')
     parser.add_argument('--loader-workers', default=0, type=int,
             help='number of data loading workers, per GPU in training or '
             'in total in testing')
+
     parser.add_argument('--cache', action='store_true',
             help='enable caching in field datasets')
-    parser.add_argument('--crop', type=int,
-            help='size to crop the input and target data')
-    parser.add_argument('--pad', default=0, type=int,
-            help='pad the input data assuming periodic boundary condition')
 
 
 def add_train_args(parser):
@@ -47,10 +50,11 @@ def add_train_args(parser):
             help='comma-sep. list of glob patterns for validation input data')
     parser.add_argument('--val-tgt-patterns', type=str_list, required=True,
             help='comma-sep. list of glob patterns for validation target data')
-    parser.add_argument('--epochs', default=1024, type=int,
-            help='total number of epochs to run')
     parser.add_argument('--augment', action='store_true',
             help='enable training data augmentation')
+
+    parser.add_argument('--epochs', default=128, type=int,
+            help='total number of epochs to run')
     parser.add_argument('--optimizer', default='Adam',
             help='optimizer from torch.optim')
     parser.add_argument('--lr', default=0.001, type=float,
@@ -59,10 +63,13 @@ def add_train_args(parser):
 #            help='momentum')
     parser.add_argument('--weight-decay', default=0., type=float,
             help='weight decay')
-    parser.add_argument('--dist-backend', default='nccl', type=str,
-            choices=['gloo', 'nccl'], help='distributed backend')
     parser.add_argument('--seed', type=int,
             help='seed for initializing training')
+
+    parser.add_argument('--div-data', action='store_true',
+            help='enable data division among GPUs, useful with cache')
+    parser.add_argument('--dist-backend', default='nccl', type=str,
+            choices=['gloo', 'nccl'], help='distributed backend')
     parser.add_argument('--log-interval', default=20, type=int,
             help='interval between logging training loss')
 

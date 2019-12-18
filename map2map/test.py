@@ -13,11 +13,8 @@ def test(args):
     test_dataset = FieldDataset(
         in_patterns=args.test_in_patterns,
         tgt_patterns=args.test_tgt_patterns,
-        cache=args.cache,
-        crop=args.crop,
-        pad=args.pad,
         augment=False,
-        norms=args.norms,
+        **vars(args),
     )
     test_loader = DataLoader(
         test_dataset,

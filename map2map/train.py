@@ -48,19 +48,16 @@ def gpu_worker(local_rank, args):
     train_dataset = FieldDataset(
         in_patterns=args.train_in_patterns,
         tgt_patterns=args.train_tgt_patterns,
-        cache=args.cache,
-        crop=args.crop,
-        pad=args.pad,
-        augment=args.augment,
-        norms=args.norms,
+        **vars(args),
     )
-    #train_sampler = DistributedSampler(train_dataset, shuffle=True)
-    train_sampler = DistributedSampler(train_dataset)
+    if not args.div_data:
+        #train_sampler = DistributedSampler(train_dataset, shuffle=True)
+        train_sampler = DistributedSampler(train_dataset)
     train_loader = DataLoader(
         train_dataset,
         batch_size=args.batches,
-        shuffle=False,
-        sampler=train_sampler,
+        shuffle=args.div_data,
+        sampler=None if args.div_data else train_sampler,
         num_workers=args.loader_workers,
         pin_memory=True
     )
@@ -68,19 +65,17 @@ def gpu_worker(local_rank, args):
     val_dataset = FieldDataset(
         in_patterns=args.val_in_patterns,
         tgt_patterns=args.val_tgt_patterns,
-        cache=args.cache,
-        crop=args.crop,
-        pad=args.pad,
         augment=False,
-        norms=args.norms,
+        **{k:v for k, v in vars(args).items() if k != 'augment'},
     )
-    #val_sampler = DistributedSampler(val_dataset, shuffle=False)
-    val_sampler = DistributedSampler(val_dataset)
+    if not args.div_data:
+        #val_sampler = DistributedSampler(val_dataset, shuffle=False)
+        val_sampler = DistributedSampler(val_dataset)
     val_loader = DataLoader(
         val_dataset,
         batch_size=args.batches,
         shuffle=False,
-        sampler=val_sampler,
+        sampler=None if args.div_data else val_sampler,
         num_workers=args.loader_workers,
         pin_memory=True
     )
@@ -129,7 +124,8 @@ def gpu_worker(local_rank, args):
         #args.logger.add_hparams(hparam_dict=hparam, metric_dict={})
 
     for epoch in range(args.start_epoch, args.epochs):
-        train_sampler.set_epoch(epoch)
+        if not args.div_data:
+            train_sampler.set_epoch(epoch)
         train(epoch, train_loader, model, criterion, optimizer, scheduler, args)
 
         val_loss = validate(epoch, val_loader, model, criterion, args)
