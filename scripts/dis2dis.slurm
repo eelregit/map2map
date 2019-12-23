@@ -1,7 +1,6 @@
 #!/bin/bash
 
 #SBATCH --job-name=dis2dis
-#SBATCH --dependency=singleton
 #SBATCH --output=%x-%j.out
 
 #SBATCH --partition=gpu

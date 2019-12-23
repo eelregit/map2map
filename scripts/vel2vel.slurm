@@ -1,7 +1,6 @@
 #!/bin/bash
 
 #SBATCH --job-name=vel2vel
-#SBATCH --dependency=singleton
 #SBATCH --output=%x-%j.out
 
 #SBATCH --partition=gpu

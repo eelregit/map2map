@@ -82,21 +82,24 @@ def gpu_worker(local_rank, args):
 
     in_channels, out_channels = train_dataset.channels
 
-    model = models.__dict__[args.model](in_channels, out_channels)
+    model = getattr(models, args.model)
+    model = model(in_channels, out_channels)
     model.to(args.device)
     model = DistributedDataParallel(model, device_ids=[args.device])
 
-    criterion = torch.nn.__dict__[args.criterion]()
+    criterion = getattr(torch.nn, args.criterion)
+    criterion = criterion()
     criterion.to(args.device)
 
-    optimizer = torch.optim.__dict__[args.optimizer](
+    optimizer = getattr(torch.optim, args.optimizer)
+    optimizer = optimizer(
         model.parameters(),
         lr=args.lr,
         #momentum=args.momentum,
         weight_decay=args.weight_decay,
     )
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer,
-            factor=0.5, patience=2, verbose=True)
+            factor=0.5, patience=3, verbose=True)
 
     if args.load_state:
         state = torch.load(args.load_state, map_location=args.device)

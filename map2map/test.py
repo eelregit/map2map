@@ -25,8 +25,10 @@ def test(args):
 
     in_channels, out_channels = test_dataset.channels
 
-    model = models.__dict__[args.model](in_channels, out_channels)
-    criterion = torch.nn.__dict__[args.criterion]()
+    model = getattr(models, args.model)
+    model = model(in_channels, out_channels)
+    criterion = getattr(torch.nn, args.criterion)
+    criterion = criterion()
 
     device = torch.device('cpu')
     state = torch.load(args.load_state, map_location=device)

@@ -4,7 +4,7 @@ from . import cosmology
 
 
 def import_norm(path):
-    mod, func = path.rsplit('.', 1)
+    mod, fun = path.rsplit('.', 1)
     mod = import_module('.' + mod, __name__)
-    func = getattr(mod, func)
-    return func
+    fun = getattr(mod, fun)
+    return fun
