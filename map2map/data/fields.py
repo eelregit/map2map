@@ -45,7 +45,7 @@ class FieldDataset(Dataset):
         self.in_channels = sum(np.load(f).shape[0] for f in self.in_files[0])
         self.tgt_channels = sum(np.load(f).shape[0] for f in self.tgt_files[0])
 
-        self.size = np.load(self.in_files[0][0]).shape[-3:]
+        self.size = np.load(self.in_files[0][0]).shape[1:]
         self.size = np.asarray(self.size)
         self.ndim = len(self.size)
 

@@ -27,7 +27,7 @@ tgt_dir="nonlin"
 
 test_dirs="*99"
 
-files="vel/512x000.npy"
+files="vel.npy"
 in_files="$files"
 tgt_files="$files"
 

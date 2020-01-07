@@ -29,7 +29,7 @@ tgt_dir="nonlin"
 train_dirs="*[0-8]"
 val_dirs="*[0-8]9"
 
-files="dis/512x000.npy"
+files="dis.npy"
 in_files="$files"
 tgt_files="$files"
 
@@ -41,7 +41,7 @@ srun m2m.py train \
     --val-tgt-patterns "$data_root_dir/$tgt_dir/$val_dirs/$tgt_files" \
     --norms cosmology.dis --augment --crop 100 --pad 42 \
     --model VNet \
-    --epochs 128 --lr 0.001 --batches 1 --loader-workers 0 \
+    --epochs 128 --lr 0.001 --batches 1 --loader-workers 0 --seed $RANDOM \
     --cache --div-data
 #    --load-state checkpoint.pth \
 

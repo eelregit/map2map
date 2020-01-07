@@ -30,7 +30,7 @@ def add_common_args(parser):
             help='path to load model, optimizer, rng, etc.')
 
     parser.add_argument('--batches', default=1, type=int,
-             help='mini-batch size, per GPU in training or in total in testing')
+            help='mini-batch size, per GPU in training or in total in testing')
     parser.add_argument('--loader-workers', default=0, type=int,
             help='number of data loading workers, per GPU in training or '
             'in total in testing')
@@ -63,7 +63,7 @@ def add_train_args(parser):
 #            help='momentum')
     parser.add_argument('--weight-decay', default=0., type=float,
             help='weight decay')
-    parser.add_argument('--seed', type=int,
+    parser.add_argument('--seed', default=42, type=int,
             help='seed for initializing training')
 
     parser.add_argument('--div-data', action='store_true',

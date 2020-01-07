@@ -1,6 +1,5 @@
 import os
 import shutil
-import random
 import torch
 from torch.multiprocessing import spawn
 from torch.distributed import init_process_group, destroy_process_group, all_reduce
@@ -15,8 +14,6 @@ from .models import narrow_like
 
 
 def node_worker(args):
-    if args.seed is None:
-        args.seed = random.randint(0, 65535)
     torch.manual_seed(args.seed)  # NOTE: why here not in gpu_worker?
     #torch.backends.cudnn.deterministic = True  # NOTE: test perf
 
@@ -155,8 +152,8 @@ def gpu_worker(local_rank, args):
             if min_loss is None or val_loss < min_loss:
                 min_loss = val_loss
                 shutil.copyfile(ckpt_file, best_file.format(epoch + 1))
-                if os.path.isfile(best_file.format(epoch)):
-                    os.remove(best_file.format(epoch))
+                #if os.path.isfile(best_file.format(epoch)):
+                #    os.remove(best_file.format(epoch))
 
     destroy_process_group()
 

@@ -27,7 +27,7 @@ tgt_dir="nonlin"
 
 test_dirs="*99"
 
-files="dis/512x000.npy"
+files="dis.npy"
 in_files="$files"
 tgt_files="$files"
 
