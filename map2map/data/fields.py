@@ -37,6 +37,8 @@ class FieldDataset(Dataset):
         assert len(self.in_files) == len(self.tgt_files), \
                 'input and target sample sizes do not match'
 
+        assert len(self.in_files) > 0, 'file not found'
+
         if div_data:
             files = len(self.in_files) // world_size
             self.in_files = self.in_files[rank * files : (rank + 1) * files]
@@ -151,7 +153,7 @@ def flip(fields, axes, ndim):
 
     new_fields = []
     for x in fields:
-        if x.size(0) == ndim:  # flip vector components
+        if x.shape[0] == ndim:  # flip vector components
             x[axes] = - x[axes]
 
         axes = (1 + axes).tolist()
@@ -167,7 +169,7 @@ def perm(fields, axes, ndim):
 
     new_fields = []
     for x in fields:
-        if x.size(0) == ndim:  # permutate vector components
+        if x.shape[0] == ndim:  # permutate vector components
             x = x[axes]
 
         axes = [0] + (1 + axes).tolist()

@@ -39,7 +39,9 @@ class ConvBlock(nn.Module):
             in_channels, out_channels = self._setup_conv()
             return nn.Conv3d(in_channels, out_channels, self.kernel_size)
         elif l == 'B':
-            return nn.BatchNorm3d(self.bn_channels)
+            #return nn.BatchNorm3d(self.bn_channels)
+            #return nn.InstanceNorm3d(self.bn_channels, affine=True, track_running_stats=True)
+            return nn.InstanceNorm3d(self.bn_channels)
         elif l == 'A':
             return Swish()
         else:
@@ -109,8 +111,8 @@ def narrow_like(a, b):
     Try to be symmetric but cut more on the right for odd difference,
     consistent with the downsampling.
     """
-    for dim in range(2, 5):
-        width = a.size(dim) - b.size(dim)
+    for d in range(2, a.dim()):
+        width = a.shape[d] - b.shape[d]
         half_width = width // 2
-        a = a.narrow(dim, half_width, a.size(dim) - width)
+        a = a.narrow(d, half_width, a.shape[d] - width)
     return a
