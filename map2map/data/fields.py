@@ -12,7 +12,7 @@ class FieldDataset(Dataset):
     `in_patterns` is a list of glob patterns for the input fields.
     For example, `in_patterns=['/train/field1_*.npy', '/train/field2_*.npy']`.
     Likewise `tgt_patterns` is for target fields.
-    Input and target samples of all fields are matched by sorting the globbed files.
+    Input and target samples are matched by sorting the globbed files.
 
     `norms` can be a list of callables to normalize each field.
 
