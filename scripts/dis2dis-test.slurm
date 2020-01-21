@@ -35,7 +35,7 @@ tgt_files="$files"
 m2m.py test \
     --test-in-patterns "$data_root_dir/$in_dir/$test_dirs/$in_files" \
     --test-tgt-patterns "$data_root_dir/$tgt_dir/$test_dirs/$tgt_files" \
-    --norms cosmology.dis --crop 256 --pad 20 \
+    --in-norms cosmology.dis --tgt-norms cosmology.dis --crop 256 --pad 20 \
     --model VNet \
     --load-state best_model.pth \
     --batches 1 --loader-workers 0 \

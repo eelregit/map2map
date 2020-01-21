@@ -5,10 +5,10 @@ from .conv import ConvBlock, ResBlock, narrow_like
 
 
 class VNet(nn.Module):
-    def __init__(self, in_channels, out_channels):
+    def __init__(self, in_chan, out_chan):
         super().__init__()
 
-        self.conv_l0 = ResBlock(in_channels, 64, seq='CAC')
+        self.conv_l0 = ResBlock(in_chan, 64, seq='CAC')
         self.down_l0 = ConvBlock(64, seq='BADBA')
         self.conv_l1 = ResBlock(64, seq='CBAC')
         self.down_l1 = ConvBlock(64, seq='BADBA')
@@ -18,7 +18,7 @@ class VNet(nn.Module):
         self.up_r1 = ConvBlock(64, seq='BAUBA')
         self.conv_r1 = ResBlock(128, 64, seq='CBAC')
         self.up_r0 = ConvBlock(64, seq='BAUBA')
-        self.conv_r0 = ResBlock(128, out_channels, seq='CAC')
+        self.conv_r0 = ResBlock(128, out_chan, seq='CAC')
 
     def forward(self, x):
         y0 = self.conv_l0(x)
@@ -45,11 +45,11 @@ class VNet(nn.Module):
 
 
 class VNetFat(nn.Module):
-    def __init__(self, in_channels, out_channels):
+    def __init__(self, in_chan, out_chan):
         super().__init__()
 
         self.conv_l0 = nn.Sequential(
-            ResBlock(in_channels, 64, seq='CACBA'),
+            ResBlock(in_chan, 64, seq='CACBA'),
             ResBlock(64, seq='CBACBA'),
         )
         self.down_l0 = ConvBlock(64, seq='DBA')
@@ -72,7 +72,7 @@ class VNetFat(nn.Module):
         self.up_r0 = ConvBlock(128, 64, seq='UBA')
         self.conv_r0 = nn.Sequential(
             ResBlock(128, seq='CBACBA'),
-            ResBlock(128, out_channels, seq='CAC'),
+            ResBlock(128, out_chan, seq='CAC'),
         )
 
     def forward(self, x):

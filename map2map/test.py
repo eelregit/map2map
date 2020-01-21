@@ -23,10 +23,10 @@ def test(args):
         num_workers=args.loader_workers,
     )
 
-    in_channels, out_channels = test_dataset.channels
+    in_chan, out_chan = test_dataset.in_chan, test_dataset.tgt_chan
 
     model = getattr(models, args.model)
-    model = model(in_channels, out_channels)
+    model = model(sum(in_chan), sum(out_chan))
     criterion = getattr(torch.nn, args.criterion)
     criterion = criterion()
 
@@ -53,11 +53,17 @@ def test(args):
 
             print('sample {} loss: {}'.format(i, loss.item()))
 
-            if args.norms is not None:
-                norm = test_dataset.norms[0]  # FIXME
-                norm(input, undo=True)
-                norm(output, undo=True)
-                norm(target, undo=True)
+            if args.in_norms is not None:
+                start = 0
+                for norm, stop in zip(test_dataset.in_norms, np.cumsum(in_chan)):
+                    norm(input[:, start:stop], undo=True)
+                    start = stop
+            if args.tgt_norms is not None:
+                start = 0
+                for norm, stop in zip(test_dataset.tgt_norms, np.cumsum(out_chan)):
+                    norm(output[:, start:stop], undo=True)
+                    norm(target[:, start:stop], undo=True)
+                    start = stop
 
             np.savez('{}.npz'.format(i), input=input.numpy(),
                     output=output.numpy(), target=target.numpy())

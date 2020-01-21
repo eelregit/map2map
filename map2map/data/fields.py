@@ -14,7 +14,8 @@ class FieldDataset(Dataset):
     Likewise `tgt_patterns` is for target fields.
     Input and target samples are matched by sorting the globbed files.
 
-    `norms` can be a list of callables to normalize each field.
+    `in_norms` is a list of of functions to normalize the input fields.
+    Likewise for `tgt_norms`.
 
     Data augmentations are supported for scalar and vector fields.
 
@@ -25,7 +26,7 @@ class FieldDataset(Dataset):
     `div_data` enables data division, useful when combined with caching.
     """
     def __init__(self, in_patterns, tgt_patterns,
-            norms=None, augment=False, crop=None, pad=0,
+            in_norms=None, tgt_norms=None, augment=False, crop=None, pad=0,
             cache=False, div_data=False, rank=None, world_size=None,
             **kwargs):
         in_file_lists = [sorted(glob(p)) for p in in_patterns]
@@ -44,18 +45,24 @@ class FieldDataset(Dataset):
             self.in_files = self.in_files[rank * files : (rank + 1) * files]
             self.tgt_files = self.tgt_files[rank * files : (rank + 1) * files]
 
-        self.in_channels = sum(np.load(f).shape[0] for f in self.in_files[0])
-        self.tgt_channels = sum(np.load(f).shape[0] for f in self.tgt_files[0])
+        self.in_chan = [np.load(f).shape[0] for f in self.in_files[0]]
+        self.tgt_chan = [np.load(f).shape[0] for f in self.tgt_files[0]]
 
         self.size = np.load(self.in_files[0][0]).shape[1:]
         self.size = np.asarray(self.size)
         self.ndim = len(self.size)
 
-        if norms is not None:  # FIXME: in_norms, tgt_norms
-            assert len(in_patterns) == len(norms), \
-                    'numbers of normalization callables and input fields do not match'
-            norms = [import_norm(norm) for norm in norms if isinstance(norm, str)]
-        self.norms = norms
+        if in_norms is not None:
+            assert len(in_patterns) == len(in_norms), \
+                    'numbers of input normalization functions and fields do not match'
+            in_norms = [import_norm(norm) for norm in in_norms]
+        self.in_norms = in_norms
+
+        if tgt_norms is not None:
+            assert len(tgt_patterns) == len(tgt_norms), \
+                    'numbers of target normalization functions and fields do not match'
+            tgt_norms = [import_norm(norm) for norm in tgt_norms]
+        self.tgt_norms = tgt_norms
 
         self.augment = augment
         if self.ndim == 1 and self.augment:
@@ -80,19 +87,9 @@ class FieldDataset(Dataset):
     def __len__(self):
         return len(self.in_files) * self.tot_reps
 
-    @property
-    def channels(self):
-        return self.in_channels, self.tgt_channels
-
     def __getitem__(self, idx):
         idx, sub_idx = idx // self.tot_reps, idx % self.tot_reps
         start = np.unravel_index(sub_idx, self.reps) * self.crop
-        #print('==================================================')
-        #print(f'idx = {idx}, sub_idx = {sub_idx}, start = {start}')
-        #print(f'self.reps = {self.reps}, self.tot_reps = {self.tot_reps}')
-        #print(f'self.crop = {self.crop}, self.size = {self.size}')
-        #print(f'self.ndim = {self.ndim}, self.channels = {self.channels}')
-        #print(f'self.pad = {self.pad}')
 
         if self.cache:
             try:
@@ -125,10 +122,12 @@ class FieldDataset(Dataset):
             in_fields = perm(in_fields, perm_axes, self.ndim)
             tgt_fields = perm(tgt_fields, perm_axes, self.ndim)
 
-        if self.norms is not None:
-            for norm, ifield, tfield in zip(self.norms, in_fields, tgt_fields):
-                norm(ifield)
-                norm(tfield)
+        if self.in_norms is not None:
+            for norm, x in zip(self.in_norms, in_fields):
+                norm(x)
+        if self.tgt_norms is not None:
+            for norm, x in zip(self.tgt_norms, tgt_fields):
+                norm(x)
 
         in_fields = torch.cat(in_fields, dim=0)
         tgt_fields = torch.cat(tgt_fields, dim=0)

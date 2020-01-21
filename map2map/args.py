@@ -16,8 +16,10 @@ def get_args():
 
 
 def add_common_args(parser):
-    parser.add_argument('--norms', type=str_list, help='comma-sep. list '
-            'of normalization functions from .data.norms')
+    parser.add_argument('--in-norms', type=str_list, help='comma-sep. list '
+            'of input normalization functions from .data.norms')
+    parser.add_argument('--tgt-norms', type=str_list, help='comma-sep. list '
+            'of target normalization functions from .data.norms')
     parser.add_argument('--crop', type=int,
             help='size to crop the input and target data')
     parser.add_argument('--pad', default=0, type=int,

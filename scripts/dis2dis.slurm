@@ -40,7 +40,7 @@ srun m2m.py train \
     --train-tgt-patterns "$data_root_dir/$tgt_dir/$train_dirs/$tgt_files" \
     --val-in-patterns "$data_root_dir/$in_dir/$val_dirs/$in_files" \
     --val-tgt-patterns "$data_root_dir/$tgt_dir/$val_dirs/$tgt_files" \
-    --norms cosmology.dis --augment --crop 128 --pad 20 \
+    --in-norms cosmology.dis --tgt-norms cosmology.dis --augment --crop 128 --pad 20 \
     --model VNet --adv-model UNet --cgan \
     --lr 0.0001 --adv-lr 0.0004 --batches 1 --loader-workers 0 \
     --epochs 128 --seed $RANDOM \

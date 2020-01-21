@@ -81,10 +81,10 @@ def gpu_worker(local_rank, args):
             pin_memory=True
         )
 
-    in_channels, out_channels = train_dataset.channels
+    in_chan, out_chan = train_dataset.in_chan, train_dataset.tgt_chan
 
     model = getattr(models, args.model)
-    model = model(in_channels, out_channels)
+    model = model(sum(in_chan), sum(out_chan))
     model.to(args.device)
     model = DistributedDataParallel(model, device_ids=[args.device],
             process_group=dist.new_group())
@@ -108,8 +108,8 @@ def gpu_worker(local_rank, args):
     args.adv = args.adv_model is not None
     if args.adv:
         adv_model = getattr(models, args.adv_model)
-        adv_model = adv_model(in_channels + out_channels
-                if args.cgan else out_channels, 1)
+        adv_model = adv_model(sum(in_chan + out_chan)
+                if args.cgan else sum(out_chan), 1)
         adv_model.to(args.device)
         adv_model = DistributedDataParallel(adv_model, device_ids=[args.device],
                 process_group=dist.new_group())
