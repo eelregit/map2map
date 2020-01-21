@@ -14,11 +14,12 @@
 hostname; pwd; date
 
 
-module load gcc python3
+#module load gcc python3
+source $HOME/anaconda/bin/activate torch
 
 
 export MASTER_ADDR=$HOSTNAME
-export MASTER_PORT=8888
+export MASTER_PORT=60606
 
 
 data_root_dir="/mnt/ceph/users/yinli/Quijote"
@@ -39,9 +40,10 @@ srun m2m.py train \
     --train-tgt-patterns "$data_root_dir/$tgt_dir/$train_dirs/$tgt_files" \
     --val-in-patterns "$data_root_dir/$in_dir/$val_dirs/$in_files" \
     --val-tgt-patterns "$data_root_dir/$tgt_dir/$val_dirs/$tgt_files" \
-    --norms cosmology.vel --augment --crop 100 --pad 42 \
-    --model VNet \
-    --epochs 128 --lr 0.001 --batches 1 --loader-workers 0 --seed $RANDOM \
+    --norms cosmology.vel --augment --crop 128 --pad 20 \
+    --model VNet --adv-model UNet --cgan \
+    --lr 0.0001 --adv-lr 0.0004 --batches 1 --loader-workers 0 \
+    --epochs 128 --seed $RANDOM \
     --cache --div-data
 #    --load-state checkpoint.pth \
 

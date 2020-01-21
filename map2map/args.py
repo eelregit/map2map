@@ -62,20 +62,20 @@ def add_train_args(parser):
     parser.add_argument('--cgan', action='store_true',
             help='enable conditional GAN')
 
-    parser.add_argument('--epochs', default=128, type=int,
-            help='total number of epochs to run')
     parser.add_argument('--optimizer', default='Adam', type=str,
             help='optimizer from torch.optim')
     parser.add_argument('--lr', default=0.001, type=float,
             help='initial learning rate')
 #    parser.add_argument('--momentum', default=0.9, type=float,
 #            help='momentum')
-    parser.add_argument('--weight-decay', default=0., type=float,
+    parser.add_argument('--weight-decay', default=0, type=float,
             help='weight decay')
     parser.add_argument('--adv-lr', type=float,
             help='initial adversary learning rate')
     parser.add_argument('--adv-weight-decay', type=float,
             help='adversary weight decay')
+    parser.add_argument('--epochs', default=128, type=int,
+            help='total number of epochs to run')
     parser.add_argument('--seed', default=42, type=int,
             help='seed for initializing training')
 
