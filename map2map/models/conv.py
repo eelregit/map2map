@@ -43,7 +43,7 @@ class ConvBlock(nn.Module):
             #return nn.InstanceNorm3d(self.bn_channels, affine=True, track_running_stats=True)
             return nn.InstanceNorm3d(self.bn_channels)
         elif l == 'A':
-            return Swish()
+            return nn.LeakyReLU()
         else:
             raise NotImplementedError('layer type {} not supported'.format(l))
 
@@ -84,7 +84,7 @@ class ResBlock(ConvBlock):
                     'not supported yet')
 
         if seq[-1] == 'A':
-            self.act = Swish()
+            self.act = nn.LeakyReLU()
         else:
             self.act = None
 
