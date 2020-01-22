@@ -288,8 +288,9 @@ def train(epoch, loader, model, criterion, optimizer, scheduler,
             loss_adv = adv_criterion(eval_out, real)  # FIXME try min
             epoch_loss[1] += loss_adv.item()
 
-            loss_fac = loss.item() / (loss_adv.item() + 1e-8)
-            loss += loss_fac * (loss_adv - loss_adv.item())  # FIXME does this work?
+            if epoch >= args.adv_delay:
+                loss_fac = loss.item() / (loss_adv.item() + 1e-8)
+                loss += loss_fac * (loss_adv - loss_adv.item())  # FIXME does this work?
 
         optimizer.zero_grad()
         loss.backward()
