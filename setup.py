@@ -16,7 +16,7 @@ setup(
     ],
     extras_require={
         "visualization":  ["tensorboard"],
-    }
+    },
     scripts=[
         'scripts/m2m.py',
     ]
