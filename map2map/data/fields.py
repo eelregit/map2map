@@ -114,7 +114,8 @@ class FieldDataset(Dataset):
             tgt_fields = [np.load(f) for f in self.tgt_files[idx]]
 
         in_fields = crop(in_fields, start, self.crop, self.pad, self.scale_factor)
-        tgt_fields = crop(tgt_fields, start, self.crop, np.zeros_like(self.pad))
+        tgt_fields = crop(tgt_fields, start * self.scale_factor,
+                self.crop * self.scale_factor, np.zeros_like(self.pad))
 
         in_fields = [torch.from_numpy(f).to(torch.float32) for f in in_fields]
         tgt_fields = [torch.from_numpy(f).to(torch.float32) for f in tgt_fields]
