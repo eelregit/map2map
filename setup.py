@@ -13,8 +13,10 @@ setup(
         'torch',
         'numpy',
         'scipy',
-        'tensorboard',
     ],
+    extras_require={
+        "visualization":  ["tensorboard"],
+    }
     scripts=[
         'scripts/m2m.py',
     ]
