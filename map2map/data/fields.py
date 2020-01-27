@@ -27,11 +27,13 @@ class FieldDataset(Dataset):
     in which case `crop`, `pad`, and other spatial attributes will be taken
     at the original resolution.
 
+    Noise channels can be concatenated to the input.
+
     `cache` enables data caching.
     `div_data` enables data division, useful when combined with caching.
     """
     def __init__(self, in_patterns, tgt_patterns, in_norms=None, tgt_norms=None,
-            augment=False, crop=None, pad=0, scale_factor=1,
+            augment=False, crop=None, pad=0, scale_factor=1, noise_chan=0,
             cache=False, div_data=False, rank=None, world_size=None,
             **kwargs):
         in_file_lists = [sorted(glob(p)) for p in in_patterns]
@@ -88,6 +90,10 @@ class FieldDataset(Dataset):
                 "only support integer upsampling"
         self.scale_factor = scale_factor
 
+        assert isinstance(noise_chan, int) and noise_chan >= 0, \
+                "only support integer noise channels"
+        self.noise_chan = noise_chan
+
         self.cache = cache
         if self.cache:
             self.in_fields = {}
@@ -138,6 +144,11 @@ class FieldDataset(Dataset):
         if self.tgt_norms is not None:
             for norm, x in zip(self.tgt_norms, tgt_fields):
                 norm(x)
+
+        if self.noise_chan > 0:
+            in_fields.append(
+                torch.randn((self.noise_chan,) + in_fields[0].shape[1:],
+                    dtype=torch.float32))
 
         in_fields = torch.cat(in_fields, dim=0)
         tgt_fields = torch.cat(tgt_fields, dim=0)

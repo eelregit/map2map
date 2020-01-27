@@ -84,7 +84,7 @@ def gpu_worker(local_rank, args):
     in_chan, out_chan = train_dataset.in_chan, train_dataset.tgt_chan
 
     model = getattr(models, args.model)
-    model = model(sum(in_chan), sum(out_chan))
+    model = model(sum(in_chan) + args.noise_chan, sum(out_chan))
     model.to(args.device)
     model = DistributedDataParallel(model, device_ids=[args.device],
             process_group=dist.new_group())
@@ -247,6 +247,8 @@ def train(epoch, loader, model, criterion, optimizer, scheduler,
 
         # generator adversarial loss
         if args.adv:
+            if args.noise_chan > 0:
+                input = input[:, :-args.noise_chan]  # remove noise channels
             if args.cgan:
                 if hasattr(model, 'scale_factor') and model.scale_factor != 1:
                     input = F.interpolate(input,
@@ -340,6 +342,8 @@ def validate(epoch, loader, model, criterion, adv_model, adv_criterion, args):
             epoch_loss[0] += loss.item()
 
             if args.adv:
+                if args.noise_chan > 0:
+                    input = input[:, :-args.noise_chan]  # remove noise channels
                 if args.cgan:
                     if hasattr(model, 'scale_factor') and model.scale_factor != 1:
                         input = F.interpolate(input,

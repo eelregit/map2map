@@ -8,10 +8,10 @@ class PatchGAN(nn.Module):
         super().__init__()
 
         self.convs = nn.Sequential(
-            ConvBlock(in_chan, 64, seq='CA'),
+            ConvBlock(in_chan, 32, seq='CA'),
+            ConvBlock(32, 64, seq='CBA'),
             ConvBlock(64, 128, seq='CBA'),
-            ConvBlock(128, 256, seq='CBA'),
-            nn.Conv3d(256, out_chan, 1)
+            nn.Conv3d(128, out_chan, 1)
         )
 
     def forward(self, x):
