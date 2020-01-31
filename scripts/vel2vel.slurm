@@ -14,8 +14,8 @@
 hostname; pwd; date
 
 
-#module load gcc python3
-source $HOME/anaconda/bin/activate torch
+module load gcc python3
+#source $HOME/anaconda3/bin/activate torch
 
 
 export MASTER_ADDR=$HOSTNAME
