@@ -187,16 +187,21 @@ def gpu_worker(local_rank, args):
                 args)
             epoch_loss = val_loss
 
-        scheduler.step(epoch_loss[0])
-        if args.adv:
-            adv_scheduler.step(epoch_loss[0])
+        if epoch >= args.adv_delay:
+            scheduler.step(epoch_loss[0])
+            if args.adv:
+                adv_scheduler.step(epoch_loss[0])
+        else:
+            scheduler.last_epoch = epoch
+            if args.adv:
+                adv_scheduler.last_epoch = epoch
 
         if args.rank == 0:
             print(end='', flush=True)
             args.logger.close()
 
             is_best = min_loss is None or epoch_loss[0] < min_loss[0]
-            if is_best:
+            if is_best and epoch >= args.adv_delay:
                 min_loss = epoch_loss
 
             state = {

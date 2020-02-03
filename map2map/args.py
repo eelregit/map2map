@@ -72,7 +72,8 @@ def add_train_args(parser):
     parser.add_argument('--cgan', action='store_true',
             help='enable conditional GAN')
     parser.add_argument('--adv-delay', default=0, type=int,
-            help='epoch before updating the generator with adversarial loss')
+            help='epoch before updating the generator with adversarial loss, '
+            'and the learning rate with scheduler')
 
     parser.add_argument('--optimizer', default='Adam', type=str,
             help='optimizer from torch.optim')
