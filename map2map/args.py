@@ -66,7 +66,9 @@ def add_train_args(parser):
     parser.add_argument('--adv-model', type=str,
             help='enable adversary model from .models')
     parser.add_argument('--adv-criterion', default='BCEWithLogitsLoss', type=str,
-            help='adversary criterion from torch.nn')
+            help='adversarial criterion from torch.nn')
+    parser.add_argument('--min-reduction', action='store_true',
+            help='enable minimum reduction in adversarial criterion')
     parser.add_argument('--cgan', action='store_true',
             help='enable conditional GAN')
     parser.add_argument('--adv-delay', default=0, type=int,

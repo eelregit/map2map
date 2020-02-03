@@ -39,9 +39,9 @@ class ConvBlock(nn.Module):
             in_chan, out_chan = self._setup_conv()
             return nn.Conv3d(in_chan, out_chan, self.kernel_size)
         elif l == 'B':
-            #return nn.BatchNorm3d(self.norm_chan)
+            return nn.BatchNorm3d(self.norm_chan)
             #return nn.InstanceNorm3d(self.norm_chan, affine=True, track_running_stats=True)
-            return nn.InstanceNorm3d(self.norm_chan)
+            #return nn.InstanceNorm3d(self.norm_chan)
         elif l == 'A':
             return nn.LeakyReLU()
         else:

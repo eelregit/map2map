@@ -12,6 +12,7 @@ from torch.utils.tensorboard import SummaryWriter
 from .data import FieldDataset
 from . import models
 from .models import narrow_like
+from .models.adversary import adv_model_wrapper, adv_criterion_wrapper
 
 
 def node_worker(args):
@@ -108,6 +109,7 @@ def gpu_worker(local_rank, args):
     args.adv = args.adv_model is not None
     if args.adv:
         adv_model = getattr(models, args.adv_model)
+        adv_model = adv_model_wrapper(adv_model)
         adv_model = adv_model(sum(in_chan + out_chan)
                 if args.cgan else sum(out_chan), 1)
         adv_model.to(args.device)
@@ -115,7 +117,8 @@ def gpu_worker(local_rank, args):
                 process_group=dist.new_group())
 
         adv_criterion = getattr(torch.nn, args.adv_criterion)
-        adv_criterion = adv_criterion()
+        adv_criterion = adv_criterion_wrapper(adv_criterion)
+        adv_criterion = adv_criterion(reduction='min' if args.min_reduction else 'mean')
         adv_criterion.to(args.device)
 
         if args.adv_lr is None:
@@ -234,6 +237,8 @@ def train(epoch, loader, model, criterion, optimizer, scheduler,
     # loss_adv: generator (model) adversarial loss
     # adv_loss: discriminator (adv_model) loss
     epoch_loss = torch.zeros(5, dtype=torch.float64, device=args.device)
+    real = torch.ones(1, dtype=torch.float32, device=args.device)
+    fake = torch.zeros(1, dtype=torch.float32, device=args.device)
 
     for i, (input, target) in enumerate(loader):
         input = input.to(args.device, non_blocking=True)
@@ -258,11 +263,7 @@ def train(epoch, loader, model, criterion, optimizer, scheduler,
                 target = torch.cat([input, target], dim=1)
 
             eval_out = adv_model(output)
-            real = torch.ones(1, dtype=torch.float32,
-                    device=args.device).expand_as(eval_out)
-            fake = torch.zeros(1, dtype=torch.float32,
-                    device=args.device).expand_as(eval_out)
-            loss_adv = adv_criterion(eval_out, real)  # FIXME try min
+            loss_adv, = adv_criterion(eval_out, real)
             epoch_loss[1] += loss_adv.item()
 
             if epoch >= args.adv_delay:
@@ -275,14 +276,10 @@ def train(epoch, loader, model, criterion, optimizer, scheduler,
 
         # discriminator
         if args.adv:
-            eval_out = adv_model(output.detach())
-            adv_loss_fake = adv_criterion(eval_out, fake)  # FIXME try min
+            eval = adv_model([output.detach(), target])
+            adv_loss_fake, adv_loss_real = adv_criterion(eval, [fake, real])
             epoch_loss[3] += adv_loss_fake.item()
-
-            eval_tgt = adv_model(target)
-            adv_loss_real = adv_criterion(eval_tgt, real)  # FIXME try min
             epoch_loss[4] += adv_loss_real.item()
-
             adv_loss = 0.5 * (adv_loss_fake + adv_loss_real)
             epoch_loss[2] += adv_loss.item()
 
@@ -329,6 +326,8 @@ def validate(epoch, loader, model, criterion, adv_model, adv_criterion, args):
         adv_model.eval()
 
     epoch_loss = torch.zeros(5, dtype=torch.float64, device=args.device)
+    fake = torch.zeros(1, dtype=torch.float32, device=args.device)
+    real = torch.ones(1, dtype=torch.float32, device=args.device)
 
     with torch.no_grad():
         for input, target in loader:
@@ -353,25 +352,16 @@ def validate(epoch, loader, model, criterion, adv_model, adv_criterion, args):
                     target = torch.cat([input, target], dim=1)
 
                 # discriminator
-
-                eval_out = adv_model(output)
-                fake = torch.zeros(1, dtype=torch.float32,
-                        device=args.device).expand_as(eval_out)  # FIXME criterion wrapper: both D&G; min reduction; expand_as
-                adv_loss_fake = adv_criterion(eval_out, fake)  # FIXME try min
+                eval = adv_model([output, target])
+                adv_loss_fake, adv_loss_real = adv_criterion(eval, [fake, real])
                 epoch_loss[3] += adv_loss_fake.item()
-
-                eval_tgt = adv_model(target)
-                real = torch.ones(1, dtype=torch.float32,
-                        device=args.device).expand_as(eval_tgt)
-                adv_loss_real = adv_criterion(eval_tgt, real)  # FIXME try min
                 epoch_loss[4] += adv_loss_real.item()
-
                 adv_loss = 0.5 * (adv_loss_fake + adv_loss_real)
                 epoch_loss[2] += adv_loss.item()
 
                 # generator adversarial loss
-
-                loss_adv = adv_criterion(eval_out, real)  # FIXME try min
+                eval_out, _ = adv_criterion.split_input(eval, [fake, real])
+                loss_adv, = adv_criterion(eval_out, real)
                 epoch_loss[1] += loss_adv.item()
 
     dist.all_reduce(epoch_loss)
