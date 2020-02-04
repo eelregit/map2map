@@ -10,6 +10,7 @@ from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 
 from .data import FieldDataset
+from .data.figures import fig3d
 from . import models
 from .models import narrow_like
 from .models.adversary import adv_model_wrapper, adv_criterion_wrapper
@@ -322,6 +323,11 @@ def train(epoch, loader, model, criterion, optimizer, scheduler,
                     'real': epoch_loss[4],
                 }, global_step=epoch+1)
 
+        skip_chan = sum(in_chan) if args.adv and args.cgan else 0
+        args.logger.add_figure('fig/epoch/train',
+                fig3d(output[-1, skip_chan:], target[-1, skip_chan:]),
+                global_step =epoch+1)
+
     return epoch_loss
 
 
@@ -382,5 +388,10 @@ def validate(epoch, loader, model, criterion, adv_model, adv_criterion, args):
                     'fake': epoch_loss[3],
                     'real': epoch_loss[4],
                 }, global_step=epoch+1)
+
+        skip_chan = sum(in_chan) if args.adv and args.cgan else 0
+        args.logger.add_figure('fig/epoch/val',
+                fig3d(output[-1, skip_chan:], target[-1, skip_chan:]),
+                global_step =epoch+1)
 
     return epoch_loss
