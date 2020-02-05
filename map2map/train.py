@@ -83,10 +83,10 @@ def gpu_worker(local_rank, args):
             pin_memory=True
         )
 
-    in_chan, out_chan = train_dataset.in_chan, train_dataset.tgt_chan
+    args.in_chan, args.out_chan = train_dataset.in_chan, train_dataset.tgt_chan
 
     model = getattr(models, args.model)
-    model = model(sum(in_chan) + args.noise_chan, sum(out_chan))
+    model = model(sum(args.in_chan) + args.noise_chan, sum(args.out_chan))
     model.to(args.device)
     model = DistributedDataParallel(model, device_ids=[args.device],
             process_group=dist.new_group())
@@ -111,8 +111,8 @@ def gpu_worker(local_rank, args):
     if args.adv:
         adv_model = getattr(models, args.adv_model)
         adv_model = adv_model_wrapper(adv_model)
-        adv_model = adv_model(sum(in_chan + out_chan)
-                if args.cgan else sum(out_chan), 1)
+        adv_model = adv_model(sum(args.in_chan + args.out_chan)
+                if args.cgan else sum(args.out_chan), 1)
         adv_model.to(args.device)
         adv_model = DistributedDataParallel(adv_model, device_ids=[args.device],
                 process_group=dist.new_group())
@@ -323,8 +323,10 @@ def train(epoch, loader, model, criterion, optimizer, scheduler,
                     'real': epoch_loss[4],
                 }, global_step=epoch+1)
 
-        skip_chan = sum(in_chan) if args.adv and args.cgan else 0
-        args.logger.add_figure('fig/epoch/train',
+        skip_chan = sum(args.in_chan) if args.adv and args.cgan else 0
+        args.logger.add_figure('fig/epoch/train/in',
+                fig3d(narrow_like(input, output)[-1]), global_step =epoch+1)
+        args.logger.add_figure('fig/epoch/train/out',
                 fig3d(output[-1, skip_chan:], target[-1, skip_chan:]),
                 global_step =epoch+1)
 
@@ -389,7 +391,9 @@ def validate(epoch, loader, model, criterion, adv_model, adv_criterion, args):
                     'real': epoch_loss[4],
                 }, global_step=epoch+1)
 
-        skip_chan = sum(in_chan) if args.adv and args.cgan else 0
+        skip_chan = sum(args.in_chan) if args.adv and args.cgan else 0
+        args.logger.add_figure('fig/epoch/val/in',
+                fig3d(narrow_like(input, output)[-1]), global_step =epoch+1)
         args.logger.add_figure('fig/epoch/val',
                 fig3d(output[-1, skip_chan:], target[-1, skip_chan:]),
                 global_step =epoch+1)
