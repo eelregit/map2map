@@ -172,9 +172,10 @@ def crop(fields, start, crop, pad, scale_factor=1):
             x = F.interpolate(x, scale_factor=scale_factor, mode='trilinear')
             x = x.numpy().squeeze(0)
 
-            # remove buffer
+            # remove buffer and excess padding
             for d, (N, (p0, p1)) in enumerate(zip(crop, pad)):
-                begin, end = scale_factor, N + p0 + p1 - scale_factor
+                begin = scale_factor + (scale_factor - 1) * p0
+                end =  scale_factor * (N + p0 + 1) + p1
                 x = x.take(range(begin, end), axis=1 + d)
 
         new_fields.append(x)

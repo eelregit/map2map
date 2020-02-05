@@ -140,6 +140,7 @@ def gpu_worker(local_rank, args):
     if args.load_state:
         state = torch.load(args.load_state, map_location=args.device)
         args.start_epoch = state['epoch']
+        args.adv_delay += args.start_epoch
         model.module.load_state_dict(state['model'])
         optimizer.load_state_dict(state['optimizer'])
         scheduler.load_state_dict(state['scheduler'])
@@ -150,6 +151,8 @@ def gpu_worker(local_rank, args):
         torch.set_rng_state(state['rng'].cpu())  # move rng state back
         if args.rank == 0:
             min_loss = state['min_loss']
+            if 'adv_model' not in state and args.adv:
+                min_loss = None  # restarting with adversary wipes the record
             print('checkpoint at epoch {} loaded from {}'.format(
                 state['epoch'], args.load_state))
         del state
