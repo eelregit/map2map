@@ -330,7 +330,8 @@ def train(epoch, loader, model, criterion, optimizer, scheduler,
         args.logger.add_figure('fig/epoch/train/in',
                 fig3d(narrow_like(input, output)[-1]), global_step =epoch+1)
         args.logger.add_figure('fig/epoch/train/out',
-                fig3d(output[-1, skip_chan:], target[-1, skip_chan:]),
+                fig3d(output[-1, skip_chan:], target[-1, skip_chan:],
+                    output[-1, skip_chan:] - target[-1, skip_chan:]),
                 global_step =epoch+1)
 
     return epoch_loss
@@ -398,7 +399,8 @@ def validate(epoch, loader, model, criterion, adv_model, adv_criterion, args):
         args.logger.add_figure('fig/epoch/val/in',
                 fig3d(narrow_like(input, output)[-1]), global_step =epoch+1)
         args.logger.add_figure('fig/epoch/val',
-                fig3d(output[-1, skip_chan:], target[-1, skip_chan:]),
+                fig3d(output[-1, skip_chan:], target[-1, skip_chan:],
+                    output[-1, skip_chan:] - target[-1, skip_chan:]),
                 global_step =epoch+1)
 
     return epoch_loss
