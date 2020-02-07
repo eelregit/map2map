@@ -48,7 +48,17 @@ def gpu_worker(local_rank, args):
     train_dataset = FieldDataset(
         in_patterns=args.train_in_patterns,
         tgt_patterns=args.train_tgt_patterns,
-        **vars(args),
+        in_norms=args.in_norms,
+        tgt_norms=args.tgt_norms,
+        augment=args.augment,
+        crop=args.crop,
+        pad=args.pad,
+        scale_factor=args.scale_factor,
+        noise_chan=args.noise_chan,
+        cache=args.cache,
+        div_data=args.div_data,
+        rank=rank,
+        world_size=args.world_size,
     )
     if not args.div_data:
         #train_sampler = DistributedSampler(train_dataset, shuffle=True)
@@ -68,8 +78,17 @@ def gpu_worker(local_rank, args):
         val_dataset = FieldDataset(
             in_patterns=args.val_in_patterns,
             tgt_patterns=args.val_tgt_patterns,
+            in_norms=args.in_norms,
+            tgt_norms=args.tgt_norms,
             augment=False,
-            **{k: v for k, v in vars(args).items() if k != 'augment'},
+            crop=args.crop,
+            pad=args.pad,
+            scale_factor=args.scale_factor,
+            noise_chan=args.noise_chan,
+            cache=args.cache,
+            div_data=args.div_data,
+            rank=rank,
+            world_size=args.world_size,
         )
         if not args.div_data:
             #val_sampler = DistributedSampler(val_dataset, shuffle=False)

@@ -34,8 +34,7 @@ class FieldDataset(Dataset):
     """
     def __init__(self, in_patterns, tgt_patterns, in_norms=None, tgt_norms=None,
             augment=False, crop=None, pad=0, scale_factor=1, noise_chan=0,
-            cache=False, div_data=False, rank=None, world_size=None,
-            **kwargs):
+            cache=False, div_data=False, rank=None, world_size=None):
         in_file_lists = [sorted(glob(p)) for p in in_patterns]
         self.in_files = list(zip(* in_file_lists))
 
