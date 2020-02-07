@@ -71,10 +71,10 @@ def add_train_args(parser):
             help='enable minimum reduction in adversarial criterion')
     parser.add_argument('--cgan', action='store_true',
             help='enable conditional GAN')
-    parser.add_argument('--loss-halflife', default=10, type=float,
-            help='half-life (epoch) to anneal loss while enhancing adv-loss')
     parser.add_argument('--loss-fraction', default=0.5, type=float,
             help='final fraction of loss (vs adv-loss)')
+    parser.add_argument('--loss-halflife', default=10, type=float,
+            help='half-life (epoch) to anneal loss while enhancing adv-loss')
 
     parser.add_argument('--optimizer', default='Adam', type=str,
             help='optimizer from torch.optim')

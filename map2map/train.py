@@ -64,6 +64,7 @@ def gpu_worker(local_rank, node, args):
     train_dataset = FieldDataset(
         in_patterns=args.train_in_patterns,
         tgt_patterns=args.train_tgt_patterns,
+        rank=rank,
         **vars(args),
     )
     if not args.div_data:
@@ -83,6 +84,7 @@ def gpu_worker(local_rank, node, args):
             in_patterns=args.val_in_patterns,
             tgt_patterns=args.val_tgt_patterns,
             augment=False,
+            rank=rank,
             **{k: v for k, v in vars(args).items() if k != 'augment'},
         )
         if not args.div_data:
@@ -190,6 +192,7 @@ def gpu_worker(local_rank, node, args):
 
     torch.backends.cudnn.benchmark = True  # NOTE: test perf
 
+    logger = None
     if rank == 0:
         logger = SummaryWriter()
 
