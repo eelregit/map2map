@@ -1,5 +1,6 @@
 import os
 import shutil
+from pprint import pprint
 import torch
 import torch.nn.functional as F
 import torch.distributed as dist
@@ -26,7 +27,7 @@ def node_worker(args):
 
     node = int(os.environ['SLURM_NODEID'])
     if node == 0:
-        print(args)
+        pprint(vars(args))
     args.node = node
 
     spawn(gpu_worker, args=(args,), nprocs=args.gpus_per_node)

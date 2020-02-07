@@ -1,3 +1,4 @@
+from pprint import pprint
 import numpy as np
 import torch
 from torch.utils.data import DataLoader
@@ -8,7 +9,7 @@ from .models import narrow_like
 
 
 def test(args):
-    print(args)
+    pprint(vars(args))
 
     test_dataset = FieldDataset(
         in_patterns=args.test_in_patterns,
