@@ -1,7 +1,7 @@
 from .unet import UNet
 from .vnet import VNet, VNetFat
 from .pyramid import PyramidNet
-from .patchgan import PatchGAN
+from .patchgan import PatchGAN, PatchGAN42
 
 from .conv import narrow_like
 

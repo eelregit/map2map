@@ -58,7 +58,7 @@ def gpu_worker(local_rank, args):
         noise_chan=args.noise_chan,
         cache=args.cache,
         div_data=args.div_data,
-        rank=rank,
+        rank=args.rank,
         world_size=args.world_size,
     )
     if not args.div_data:
@@ -88,7 +88,7 @@ def gpu_worker(local_rank, args):
             noise_chan=args.noise_chan,
             cache=args.cache,
             div_data=args.div_data,
-            rank=rank,
+            rank=args.rank,
             world_size=args.world_size,
         )
         if not args.div_data:
