@@ -43,7 +43,7 @@ srun m2m.py train \
     --in-norms cosmology.dis,cosmology.vel --tgt-norms cosmology.dis,cosmology.vel --augment --crop 88 --pad 20 --scale-factor 2 \
     --model VNet --adv-model PatchGAN --cgan \
     --lr 0.0001 --adv-lr 0.0004 --batches 1 --loader-workers 0 \
-    --epochs 128 --seed $RANDOM \
+    --epochs 1024 --seed $RANDOM \
     --cache --div-data
 #    --val-in-patterns "$data_root_dir/$in_dir/$val_dirs/$in_files_1,$data_root_dir/$in_dir/$val_dirs/$in_files_2" \
 #    --val-tgt-patterns "$data_root_dir/$tgt_dir/$val_dirs/$tgt_files_1,$data_root_dir/$tgt_dir/$val_dirs/$tgt_files_2" \

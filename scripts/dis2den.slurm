@@ -42,7 +42,7 @@ srun m2m.py train \
     --in-norms cosmology.dis --tgt-norms torch.log1p --augment --crop 128 --pad 20 \
     --model UNet \
     --lr 0.0001 --batches 1 --loader-workers 0 \
-    --epochs 128 --seed $RANDOM \
+    --epochs 1024 --seed $RANDOM \
     --cache --div-data
 #    --load-state checkpoint.pth \
 
