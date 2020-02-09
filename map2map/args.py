@@ -38,6 +38,9 @@ def add_common_args(parser):
             help='model criterion from torch.nn')
     parser.add_argument('--load-state', default='', type=str,
             help='path to load the states of model, optimizer, rng, etc.')
+    parser.add_argument('--load-state-non-strict', action='store_false',
+            help='allow incompatible keys when loading model states',
+            dest='load_state_strict')
 
     parser.add_argument('--batches', default=1, type=int,
             help='mini-batch size, per GPU in training or in total in testing')

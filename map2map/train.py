@@ -15,6 +15,7 @@ from .data.figures import fig3d
 from . import models
 from .models import narrow_like
 from .models.adversary import adv_model_wrapper, adv_criterion_wrapper
+from .state import load_model_state_dict
 
 
 def node_worker(args):
@@ -161,9 +162,11 @@ def gpu_worker(local_rank, args):
         state = torch.load(args.load_state, map_location=args.device)
         args.start_epoch = state['epoch']
         args.adv_delay += args.start_epoch
-        model.module.load_state_dict(state['model'])
+        load_model_state_dict(model.module, state['model'],
+                strict=args.load_state_strict)
         if 'adv_model' in state and args.adv:
-            adv_model.module.load_state_dict(state['adv_model'])
+            load_model_state_dict(adv_model.module, state['adv_model'],
+                    strict=args.load_state_strict)
         torch.set_rng_state(state['rng'].cpu())  # move rng state back
         if args.rank == 0:
             min_loss = state['min_loss']
@@ -220,8 +223,8 @@ def gpu_worker(local_rank, args):
             print(end='', flush=True)
             args.logger.close()
 
-            is_best = min_loss is None or epoch_loss[0] < min_loss[0]
-            if is_best and epoch >= args.adv_delay:
+            good = min_loss is None or epoch_loss[0] < min_loss[0]
+            if good and epoch >= args.adv_delay:
                 min_loss = epoch_loss
 
             state = {
@@ -235,14 +238,14 @@ def gpu_worker(local_rank, args):
                     'adv_model': adv_model.module.state_dict(),
                 })
             ckpt_file = 'checkpoint.pth'
-            best_file = 'best_model_{}.pth'
+            state_file = 'state_{}.pth'
             torch.save(state, ckpt_file)
             del state
 
-            if is_best:
-                shutil.copyfile(ckpt_file, best_file.format(epoch + 1))
-                #if os.path.isfile(best_file.format(epoch)):
-                #    os.remove(best_file.format(epoch))
+            if good:
+                shutil.copyfile(ckpt_file, state_file.format(epoch + 1))
+                #if os.path.isfile(state_file.format(epoch)):
+                #    os.remove(state_file.format(epoch))
 
     dist.destroy_process_group()
 

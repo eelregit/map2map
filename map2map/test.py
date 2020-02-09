@@ -6,6 +6,7 @@ from torch.utils.data import DataLoader
 from .data import FieldDataset
 from . import models
 from .models import narrow_like
+from .state import load_model_state_dict
 
 
 def test(args):
@@ -39,7 +40,7 @@ def test(args):
 
     device = torch.device('cpu')
     state = torch.load(args.load_state, map_location=device)
-    model.load_state_dict(state['model'])
+    load_model_state_dict(model, state['model'], strict=args.load_state_strict)
     print('model state at epoch {} loaded from {}'.format(
         state['epoch'], args.load_state))
     del state
