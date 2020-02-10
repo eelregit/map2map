@@ -90,6 +90,8 @@ def add_train_args(parser):
             help='initial adversary learning rate')
     parser.add_argument('--adv-weight-decay', type=float,
             help='adversary weight decay')
+    parser.add_argument('--reduce-lr-on-plateau', action='store_true',
+            help='Enable ReduceLROnPlateau learning rate scheduler')
     parser.add_argument('--epochs', default=128, type=int,
             help='total number of epochs to run')
     parser.add_argument('--seed', default=42, type=int,

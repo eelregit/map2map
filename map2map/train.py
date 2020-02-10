@@ -210,14 +210,15 @@ def gpu_worker(local_rank, args):
                 args)
             epoch_loss = val_loss
 
-        if epoch >= args.adv_delay:
-            scheduler.step(epoch_loss[0])
-            if args.adv:
-                adv_scheduler.step(epoch_loss[0])
-        else:
-            scheduler.last_epoch = epoch
-            if args.adv:
-                adv_scheduler.last_epoch = epoch
+        if args.reduce_lr_on_plateau:
+            if epoch >= args.adv_delay:
+                scheduler.step(epoch_loss[0])
+                if args.adv:
+                    adv_scheduler.step(epoch_loss[0])
+            else:
+                scheduler.last_epoch = epoch
+                if args.adv:
+                    adv_scheduler.last_epoch = epoch
 
         if args.rank == 0:
             print(end='', flush=True)
