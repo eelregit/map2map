@@ -18,7 +18,24 @@ from .models.adversary import adv_model_wrapper, adv_criterion_wrapper
 from .state import load_model_state_dict
 
 
+def set_runtime_default_args(args):
+    args.val = args.val_in_patterns is not None and \
+            args.val_tgt_patterns is not None
+
+    args.adv = args.adv_model is not None
+
+    if args.adv:
+        if args.adv_lr is None:
+            args.adv_lr = args.lr
+        if args.adv_weight_decay is None:
+            args.adv_weight_decay = args.weight_decay
+
+        args.adv_epoch = 0  # epoch when adversary is initiated
+
+
 def node_worker(args):
+    set_runtime_default_args(args)
+
     torch.manual_seed(args.seed)  # NOTE: why here not in gpu_worker?
     #torch.backends.cudnn.deterministic = True  # NOTE: test perf
 
@@ -31,20 +48,20 @@ def node_worker(args):
         pprint(vars(args))
     args.node = node
 
-    spawn(gpu_worker, args=(args,), nprocs=args.gpus_per_node)
+    spawn(gpu_worker, args=(node, args), nprocs=args.gpus_per_node)
 
 
-def gpu_worker(local_rank, args):
-    args.device = torch.device('cuda', local_rank)
-    torch.cuda.device(args.device)
+def gpu_worker(local_rank, node, args):
+    device = torch.device('cuda', local_rank)
+    torch.cuda.device(device)
 
-    args.rank = args.gpus_per_node * args.node + local_rank
+    rank = args.gpus_per_node * node + local_rank
 
     dist.init_process_group(
         backend=args.dist_backend,
         init_method='env://',
         world_size=args.world_size,
-        rank=args.rank
+        rank=rank,
     )
 
     train_dataset = FieldDataset(
@@ -59,7 +76,7 @@ def gpu_worker(local_rank, args):
         noise_chan=args.noise_chan,
         cache=args.cache,
         div_data=args.div_data,
-        rank=args.rank,
+        rank=rank,
         world_size=args.world_size,
     )
     if not args.div_data:
@@ -71,11 +88,9 @@ def gpu_worker(local_rank, args):
         shuffle=args.div_data,
         sampler=None if args.div_data else train_sampler,
         num_workers=args.loader_workers,
-        pin_memory=True
+        pin_memory=True,
     )
 
-    args.val = args.val_in_patterns is not None and \
-            args.val_tgt_patterns is not None
     if args.val:
         val_dataset = FieldDataset(
             in_patterns=args.val_in_patterns,
@@ -89,7 +104,7 @@ def gpu_worker(local_rank, args):
             noise_chan=args.noise_chan,
             cache=args.cache,
             div_data=args.div_data,
-            rank=args.rank,
+            rank=rank,
             world_size=args.world_size,
         )
         if not args.div_data:
@@ -101,20 +116,20 @@ def gpu_worker(local_rank, args):
             shuffle=False,
             sampler=None if args.div_data else val_sampler,
             num_workers=args.loader_workers,
-            pin_memory=True
+            pin_memory=True,
         )
 
     args.in_chan, args.out_chan = train_dataset.in_chan, train_dataset.tgt_chan
 
     model = getattr(models, args.model)
     model = model(sum(args.in_chan) + args.noise_chan, sum(args.out_chan))
-    model.to(args.device)
-    model = DistributedDataParallel(model, device_ids=[args.device],
+    model.to(device)
+    model = DistributedDataParallel(model, device_ids=[device],
             process_group=dist.new_group())
 
     criterion = getattr(torch.nn, args.criterion)
     criterion = criterion()
-    criterion.to(args.device)
+    criterion.to(device)
 
     optimizer = getattr(torch.optim, args.optimizer)
     optimizer = optimizer(
@@ -128,25 +143,19 @@ def gpu_worker(local_rank, args):
             factor=0.1, patience=10, verbose=True)
 
     adv_model = adv_criterion = adv_optimizer = adv_scheduler = None
-    args.adv = args.adv_model is not None
     if args.adv:
         adv_model = getattr(models, args.adv_model)
         adv_model = adv_model_wrapper(adv_model)
         adv_model = adv_model(sum(args.in_chan + args.out_chan)
                 if args.cgan else sum(args.out_chan), 1)
-        adv_model.to(args.device)
-        adv_model = DistributedDataParallel(adv_model, device_ids=[args.device],
+        adv_model.to(device)
+        adv_model = DistributedDataParallel(adv_model, device_ids=[device],
                 process_group=dist.new_group())
 
         adv_criterion = getattr(torch.nn, args.adv_criterion)
         adv_criterion = adv_criterion_wrapper(adv_criterion)
         adv_criterion = adv_criterion(reduction='min' if args.min_reduction else 'mean')
-        adv_criterion.to(args.device)
-
-        if args.adv_lr is None:
-            args.adv_lr = args.lr
-        if args.adv_weight_decay is None:
-            args.adv_weight_decay = args.weight_decay
+        adv_criterion.to(device)
 
         adv_optimizer = getattr(torch.optim, args.optimizer)
         adv_optimizer = adv_optimizer(
@@ -159,21 +168,31 @@ def gpu_worker(local_rank, args):
             factor=0.1, patience=10, verbose=True)
 
     if args.load_state:
-        state = torch.load(args.load_state, map_location=args.device)
-        args.start_epoch = state['epoch']
-        args.adv_delay += args.start_epoch
+        state = torch.load(args.load_state, map_location=device)
+
+        start_epoch = state['epoch']
+
         load_model_state_dict(model.module, state['model'],
                 strict=args.load_state_strict)
-        if 'adv_model' in state and args.adv:
-            load_model_state_dict(adv_model.module, state['adv_model'],
-                    strict=args.load_state_strict)
+
+        if args.adv:
+            if 'adv_model' in state:
+                args.adv_epoch = state['adv_epoch']
+
+                load_model_state_dict(adv_model.module, state['adv_model'],
+                        strict=args.load_state_strict)
+            else:
+                args.adv_epoch = start_epoch
+
         torch.set_rng_state(state['rng'].cpu())  # move rng state back
-        if args.rank == 0:
+
+        if rank == 0:
             min_loss = state['min_loss']
             if 'adv_model' not in state and args.adv:
                 min_loss = None  # restarting with adversary wipes the record
             print('checkpoint at epoch {} loaded from {}'.format(
                 state['epoch'], args.load_state))
+
         del state
     else:
 #        def init_weights(m):
@@ -185,44 +204,40 @@ def gpu_worker(local_rank, args):
 #                m.bias.data.fill_(0)
 #        model.apply(init_weights)
 #
-        args.start_epoch = 0
-        if args.rank == 0:
+        start_epoch = 0
+
+        if rank == 0:
             min_loss = None
 
     torch.backends.cudnn.benchmark = True  # NOTE: test perf
 
-    if args.rank == 0:
-        args.logger = SummaryWriter()
+    logger = None
+    if rank == 0:
+        logger = SummaryWriter()
 
-    for epoch in range(args.start_epoch, args.epochs):
+    for epoch in range(start_epoch, args.epochs):
         if not args.div_data:
             train_sampler.set_epoch(epoch)
 
         train_loss = train(epoch, train_loader,
             model, criterion, optimizer, scheduler,
             adv_model, adv_criterion, adv_optimizer, adv_scheduler,
-            args)
+            logger, device, args)
         epoch_loss = train_loss
 
         if args.val:
             val_loss = validate(epoch, val_loader,
                 model, criterion, adv_model, adv_criterion,
-                args)
+                logger, device, args)
             epoch_loss = val_loss
 
         if args.reduce_lr_on_plateau:
-            if epoch >= args.adv_delay:
-                scheduler.step(epoch_loss[0])
-                if args.adv:
-                    adv_scheduler.step(epoch_loss[0])
-            else:
-                scheduler.last_epoch = epoch
-                if args.adv:
-                    adv_scheduler.last_epoch = epoch
+            scheduler.step(epoch_loss[0])
+            if args.adv:
+                adv_scheduler.step(epoch_loss[0])
 
-        if args.rank == 0:
-            print(end='', flush=True)
-            args.logger.close()
+        if rank == 0:
+            logger.close()
 
             good = min_loss is None or epoch_loss[0] < min_loss[0]
             if good and epoch >= args.adv_delay:
@@ -236,6 +251,7 @@ def gpu_worker(local_rank, args):
             }
             if args.adv:
                 state.update({
+                    'adv_epoch': args.adv_epoch,
                     'adv_model': adv_model.module.state_dict(),
                 })
             ckpt_file = 'checkpoint.pth'
@@ -252,22 +268,26 @@ def gpu_worker(local_rank, args):
 
 
 def train(epoch, loader, model, criterion, optimizer, scheduler,
-        adv_model, adv_criterion, adv_optimizer, adv_scheduler, args):
+        adv_model, adv_criterion, adv_optimizer, adv_scheduler,
+        logger, device, args):
     model.train()
     if args.adv:
         adv_model.train()
+
+    rank = dist.get_rank()
+    world_size = dist.get_world_size()
 
     # loss, loss_adv, adv_loss, adv_loss_fake, adv_loss_real
     # loss: generator (model) supervised loss
     # loss_adv: generator (model) adversarial loss
     # adv_loss: discriminator (adv_model) loss
-    epoch_loss = torch.zeros(5, dtype=torch.float64, device=args.device)
-    real = torch.ones(1, dtype=torch.float32, device=args.device)
-    fake = torch.zeros(1, dtype=torch.float32, device=args.device)
+    epoch_loss = torch.zeros(5, dtype=torch.float64, device=device)
+    real = torch.ones(1, dtype=torch.float32, device=device)
+    fake = torch.zeros(1, dtype=torch.float32, device=device)
 
     for i, (input, target) in enumerate(loader):
-        input = input.to(args.device, non_blocking=True)
-        target = target.to(args.device, non_blocking=True)
+        input = input.to(device, non_blocking=True)
+        target = target.to(device, non_blocking=True)
 
         output = model(input)
         if args.noise_chan > 0:
@@ -291,9 +311,11 @@ def train(epoch, loader, model, criterion, optimizer, scheduler,
             loss_adv, = adv_criterion(eval_out, real)
             epoch_loss[1] += loss_adv.item()
 
-            if epoch >= args.adv_delay:
-                loss_fac = loss.item() / (loss_adv.item() + 1e-8)
-                loss += loss_fac * (loss_adv - loss_adv.item())  # FIXME does this work?
+            r = loss.item() / (loss_adv.item() + 1e-8)
+            f = args.loss_fraction
+            e = epoch - args.adv_epoch
+            d = 0.5 ** (e / args.loss_halflife)
+            loss = (f + (1 - f) * d) * loss + (1 - f) * (1 - d) * r * loss_adv
 
         optimizer.zero_grad()
         loss.backward()
@@ -315,37 +337,37 @@ def train(epoch, loader, model, criterion, optimizer, scheduler,
         batch = epoch * len(loader) + i + 1
         if batch % args.log_interval == 0:
             dist.all_reduce(loss)
-            loss /= args.world_size
-            if args.rank == 0:
-                args.logger.add_scalar('loss/batch/train', loss.item(),
+            loss /= world_size
+            if rank == 0:
+                logger.add_scalar('loss/batch/train', loss.item(),
                         global_step=batch)
                 if args.adv:
-                    args.logger.add_scalar('loss/batch/train/adv/G',
+                    logger.add_scalar('loss/batch/train/adv/G',
                             loss_adv.item(), global_step=batch)
-                    args.logger.add_scalars('loss/batch/train/adv/D', {
+                    logger.add_scalars('loss/batch/train/adv/D', {
                             'total': adv_loss.item(),
                             'fake': adv_loss_fake.item(),
                             'real': adv_loss_real.item(),
                         }, global_step=batch)
 
     dist.all_reduce(epoch_loss)
-    epoch_loss /= len(loader) * args.world_size
-    if args.rank == 0:
-        args.logger.add_scalar('loss/epoch/train', epoch_loss[0],
+    epoch_loss /= len(loader) * world_size
+    if rank == 0:
+        logger.add_scalar('loss/epoch/train', epoch_loss[0],
                 global_step=epoch+1)
         if args.adv:
-            args.logger.add_scalar('loss/epoch/train/adv/G', epoch_loss[1],
+            logger.add_scalar('loss/epoch/train/adv/G', epoch_loss[1],
                     global_step=epoch+1)
-            args.logger.add_scalars('loss/epoch/train/adv/D', {
+            logger.add_scalars('loss/epoch/train/adv/D', {
                     'total': epoch_loss[2],
                     'fake': epoch_loss[3],
                     'real': epoch_loss[4],
                 }, global_step=epoch+1)
 
         skip_chan = sum(args.in_chan) if args.adv and args.cgan else 0
-        args.logger.add_figure('fig/epoch/train/in',
+        logger.add_figure('fig/epoch/train/in',
                 fig3d(narrow_like(input, output)[-1]), global_step =epoch+1)
-        args.logger.add_figure('fig/epoch/train/out',
+        logger.add_figure('fig/epoch/train/out',
                 fig3d(output[-1, skip_chan:], target[-1, skip_chan:],
                     output[-1, skip_chan:] - target[-1, skip_chan:]),
                 global_step =epoch+1)
@@ -353,19 +375,23 @@ def train(epoch, loader, model, criterion, optimizer, scheduler,
     return epoch_loss
 
 
-def validate(epoch, loader, model, criterion, adv_model, adv_criterion, args):
+def validate(epoch, loader, model, criterion, adv_model, adv_criterion,
+        logger, device, args):
     model.eval()
     if args.adv:
         adv_model.eval()
 
-    epoch_loss = torch.zeros(5, dtype=torch.float64, device=args.device)
-    fake = torch.zeros(1, dtype=torch.float32, device=args.device)
-    real = torch.ones(1, dtype=torch.float32, device=args.device)
+    rank = dist.get_rank()
+    world_size = dist.get_world_size()
+
+    epoch_loss = torch.zeros(5, dtype=torch.float64, device=device)
+    fake = torch.zeros(1, dtype=torch.float32, device=device)
+    real = torch.ones(1, dtype=torch.float32, device=device)
 
     with torch.no_grad():
         for input, target in loader:
-            input = input.to(args.device, non_blocking=True)
-            target = target.to(args.device, non_blocking=True)
+            input = input.to(device, non_blocking=True)
+            target = target.to(device, non_blocking=True)
 
             output = model(input)
             if args.noise_chan > 0:
@@ -398,23 +424,23 @@ def validate(epoch, loader, model, criterion, adv_model, adv_criterion, args):
                 epoch_loss[1] += loss_adv.item()
 
     dist.all_reduce(epoch_loss)
-    epoch_loss /= len(loader) * args.world_size
-    if args.rank == 0:
-        args.logger.add_scalar('loss/epoch/val', epoch_loss[0],
+    epoch_loss /= len(loader) * world_size
+    if rank == 0:
+        logger.add_scalar('loss/epoch/val', epoch_loss[0],
                 global_step=epoch+1)
         if args.adv:
-            args.logger.add_scalar('loss/epoch/val/adv/G', epoch_loss[1],
+            logger.add_scalar('loss/epoch/val/adv/G', epoch_loss[1],
                     global_step=epoch+1)
-            args.logger.add_scalars('loss/epoch/val/adv/D', {
+            logger.add_scalars('loss/epoch/val/adv/D', {
                     'total': epoch_loss[2],
                     'fake': epoch_loss[3],
                     'real': epoch_loss[4],
                 }, global_step=epoch+1)
 
         skip_chan = sum(args.in_chan) if args.adv and args.cgan else 0
-        args.logger.add_figure('fig/epoch/val/in',
+        logger.add_figure('fig/epoch/val/in',
                 fig3d(narrow_like(input, output)[-1]), global_step =epoch+1)
-        args.logger.add_figure('fig/epoch/val',
+        logger.add_figure('fig/epoch/val',
                 fig3d(output[-1, skip_chan:], target[-1, skip_chan:],
                     output[-1, skip_chan:] - target[-1, skip_chan:]),
                 global_step =epoch+1)
