@@ -240,7 +240,7 @@ def gpu_worker(local_rank, node, args):
             logger.close()
 
             good = min_loss is None or epoch_loss[0] < min_loss[0]
-            if good and epoch >= args.adv_delay:
+            if good:
                 min_loss = epoch_loss
 
             state = {
