@@ -13,8 +13,9 @@ from torch.utils.tensorboard import SummaryWriter
 from .data import FieldDataset
 from .data.figures import fig3d
 from . import models
-from .models import narrow_like
-from .models.adversary import adv_model_wrapper, adv_criterion_wrapper
+from .models import (narrow_like,
+        adv_model_wrapper, adv_criterion_wrapper,
+        add_spectral_norm, rm_spectral_norm)
 from .state import load_model_state_dict
 
 
@@ -148,6 +149,8 @@ def gpu_worker(local_rank, node, args):
         adv_model = adv_model_wrapper(adv_model)
         adv_model = adv_model(sum(args.in_chan + args.out_chan)
                 if args.cgan else sum(args.out_chan), 1)
+        if args.adv_model_spectral_norm:
+            add_spectral_norm(adv_model)
         adv_model.to(device)
         adv_model = DistributedDataParallel(adv_model, device_ids=[device],
                 process_group=dist.new_group())

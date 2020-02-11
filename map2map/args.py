@@ -68,6 +68,8 @@ def add_train_args(parser):
 
     parser.add_argument('--adv-model', type=str,
             help='enable adversary model from .models')
+    parser.add_argument('--adv-model-spectral-norm', action='store_true',
+            help='enable spectral normalization on the adversary model')
     parser.add_argument('--adv-criterion', default='BCEWithLogitsLoss', type=str,
             help='adversarial criterion from torch.nn')
     parser.add_argument('--min-reduction', action='store_true',

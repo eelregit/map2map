@@ -1,21 +1,21 @@
 import torch
 
 
-def adv_model_wrapper(cls):
+def adv_model_wrapper(module):
     """Wrap an adversary model to also take lists of Tensors as input,
     to be concatenated along the batch dimension
     """
-    class newcls(cls):
+    class new_module(module):
         def forward(self, x):
             if not isinstance(x, torch.Tensor):
                 x = torch.cat(x, dim=0)
 
             return super().forward(x)
 
-    return newcls
+    return new_module
 
 
-def adv_criterion_wrapper(cls):
+def adv_criterion_wrapper(module):
     """Wrap an adversarial criterion to:
     * also take lists of Tensors as target, used to split the input Tensor
       along the batch dimension
@@ -23,7 +23,7 @@ def adv_criterion_wrapper(cls):
     * expand target shape as that of input
     * return a list of losses, one for each pair of input and target Tensors
     """
-    class newcls(cls):
+    class new_module(module):
         def forward(self, input, target):
             assert isinstance(input, torch.Tensor)
 
@@ -41,10 +41,12 @@ def adv_criterion_wrapper(cls):
 
             if self.reduction == 'min':
                 self.reduction = 'mean'  # average over batches
-                loss = [super(newcls, self).forward(i, t) for i, t in zip(input, target)]
+                loss = [super(new_module, self).forward(i, t)
+                        for i, t in zip(input, target)]
                 self.reduction = 'min'
             else:
-                loss = [super(newcls, self).forward(i, t) for i, t in zip(input, target)]
+                loss = [super(new_module, self).forward(i, t)
+                        for i, t in zip(input, target)]
 
             return loss
 
@@ -58,4 +60,4 @@ def adv_criterion_wrapper(cls):
 
             return torch.split(input, size, dim=0)
 
-    return newcls
+    return new_module
