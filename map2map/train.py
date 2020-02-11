@@ -47,7 +47,6 @@ def node_worker(args):
     node = int(os.environ['SLURM_NODEID'])
     if node == 0:
         pprint(vars(args))
-    args.node = node
 
     spawn(gpu_worker, args=(node, args), nprocs=args.gpus_per_node)
 
