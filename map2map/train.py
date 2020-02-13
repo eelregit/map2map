@@ -274,8 +274,8 @@ def train(epoch, loader, model, criterion, optimizer, scheduler,
     # loss_adv: generator (model) adversarial loss
     # adv_loss: discriminator (adv_model) loss
     epoch_loss = torch.zeros(5, dtype=torch.float64, device=device)
-    real = torch.ones(1, dtype=torch.float32, device=device)
-    fake = torch.zeros(1, dtype=torch.float32, device=device)
+    fake = torch.zeros([1], dtype=torch.float32, device=device)
+    real = torch.full([1], args.adv_real_label, dtype=torch.float32, device=device)
 
     for i, (input, target) in enumerate(loader):
         input = input.to(device, non_blocking=True)
@@ -383,8 +383,8 @@ def validate(epoch, loader, model, criterion, adv_model, adv_criterion,
     world_size = dist.get_world_size()
 
     epoch_loss = torch.zeros(5, dtype=torch.float64, device=device)
-    fake = torch.zeros(1, dtype=torch.float32, device=device)
-    real = torch.ones(1, dtype=torch.float32, device=device)
+    fake = torch.zeros([1], dtype=torch.float32, device=device)
+    real = torch.ones([1], dtype=torch.float32, device=device)
 
     with torch.no_grad():
         for input, target in loader:
