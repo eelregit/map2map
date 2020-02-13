@@ -76,6 +76,8 @@ def add_train_args(parser):
             help='enable minimum reduction in adversarial criterion')
     parser.add_argument('--cgan', action='store_true',
             help='enable conditional GAN')
+    parser.add_argument('--adv-start', default=0, type=int,
+            help='epoch to start adversarial training')
     parser.add_argument('--loss-fraction', default=0.5, type=float,
             help='final fraction of loss (vs adv-loss)')
     parser.add_argument('--loss-halflife', default=20, type=float,
