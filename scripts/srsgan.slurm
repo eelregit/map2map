@@ -19,10 +19,6 @@ hostname; pwd; date
 source $HOME/anaconda3/bin/activate
 
 
-export MASTER_ADDR=$HOSTNAME
-export MASTER_PORT=60606
-
-
 data_root_dir="/scratch1/06431/yueyingn/dmo-50MPC-train"
 
 in_dir="low-resl"

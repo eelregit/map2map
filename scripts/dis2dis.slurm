@@ -18,10 +18,6 @@ module load gcc python3
 #source $HOME/anaconda3/bin/activate torch
 
 
-export MASTER_ADDR=$HOSTNAME
-export MASTER_PORT=60606
-
-
 data_root_dir="/mnt/ceph/users/yinli/Quijote"
 
 in_dir="linear"
