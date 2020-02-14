@@ -262,7 +262,9 @@ def train(epoch, loader, model, criterion, optimizer, scheduler,
     # adv_loss: discriminator (adv_model) loss
     epoch_loss = torch.zeros(5, dtype=torch.float64, device=device)
     fake = torch.zeros([1], dtype=torch.float32, device=device)
-    real = torch.full([1], args.adv_real_label, dtype=torch.float32, device=device)
+    real = torch.ones([1], dtype=torch.float32, device=device)
+    adv_real = torch.full([1], args.adv_label_smoothing, dtype=torch.float32,
+            device=device)
 
     for i, (input, target) in enumerate(loader):
         input = input.to(device, non_blocking=True)
@@ -290,7 +292,7 @@ def train(epoch, loader, model, criterion, optimizer, scheduler,
             set_requires_grad(adv_model, True)
 
             eval = adv_model([output.detach(), target])
-            adv_loss_fake, adv_loss_real = adv_criterion(eval, [fake, real])
+            adv_loss_fake, adv_loss_real = adv_criterion(eval, [fake, adv_real])
             epoch_loss[3] += adv_loss_fake.item()
             epoch_loss[4] += adv_loss_real.item()
             adv_loss = 0.5 * (adv_loss_fake + adv_loss_real)
