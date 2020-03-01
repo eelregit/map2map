@@ -357,12 +357,12 @@ def train(epoch, loader, model, criterion, optimizer, scheduler,
         skip_chan = 0
         if args.adv and epoch >= args.adv_start and args.cgan:
             skip_chan = sum(args.in_chan)
-        logger.add_figure('fig/epoch/train/in', fig3d(input[-1]),
-                global_step =epoch+1)
-        logger.add_figure('fig/epoch/train/out',
-                fig3d(output[-1, skip_chan:], target[-1, skip_chan:],
-                    output[-1, skip_chan:] - target[-1, skip_chan:]),
-                global_step =epoch+1)
+        logger.add_figure('fig/epoch/train', fig3d(
+                input[-1],
+                output[-1, skip_chan:],
+                target[-1, skip_chan:],
+                output[-1, skip_chan:] - target[-1, skip_chan:],
+            ), global_step=epoch+1)
 
     return epoch_loss
 
@@ -433,12 +433,12 @@ def validate(epoch, loader, model, criterion, adv_model, adv_criterion,
         skip_chan = 0
         if args.adv and epoch >= args.adv_start and args.cgan:
             skip_chan = sum(args.in_chan)
-        logger.add_figure('fig/epoch/val/in', fig3d(input[-1]),
-                global_step =epoch+1)
-        logger.add_figure('fig/epoch/val/out',
-                fig3d(output[-1, skip_chan:], target[-1, skip_chan:],
-                    output[-1, skip_chan:] - target[-1, skip_chan:]),
-                global_step =epoch+1)
+        logger.add_figure('fig/epoch/val', fig3d(
+                input[-1],
+                output[-1, skip_chan:],
+                target[-1, skip_chan:],
+                output[-1, skip_chan:] - target[-1, skip_chan:],
+            ), global_step=epoch+1)
 
     return epoch_loss
 
