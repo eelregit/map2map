@@ -80,7 +80,7 @@ def add_train_args(parser):
             help='epoch to start adversarial training')
     parser.add_argument('--adv-label-smoothing', default=1, type=float,
             help='label of real samples for discriminator, '
-            'e.g. 0.9 for label smoothing')
+            'e.g. 0.9 for label smoothing and 1 to disable')
     parser.add_argument('--loss-fraction', default=0.5, type=float,
             help='final fraction of loss (vs adv-loss)')
     parser.add_argument('--loss-halflife', default=20, type=float,
@@ -100,6 +100,9 @@ def add_train_args(parser):
             help='adversary weight decay')
     parser.add_argument('--reduce-lr-on-plateau', action='store_true',
             help='Enable ReduceLROnPlateau learning rate scheduler')
+    parser.add_argument('--init-weight-scale', type=float,
+            help='weight initialization scale, default is 0.02 with adversary '
+            'and the pytorch default without it')
     parser.add_argument('--epochs', default=128, type=int,
             help='total number of epochs to run')
     parser.add_argument('--seed', default=42, type=int,

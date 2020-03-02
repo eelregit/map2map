@@ -5,6 +5,7 @@ import time
 import sys
 from pprint import pprint
 import torch
+import torch.nn as nn
 import torch.nn.functional as F
 import torch.distributed as dist
 from torch.multiprocessing import spawn
@@ -113,7 +114,7 @@ def gpu_worker(local_rank, node, args):
     model = DistributedDataParallel(model, device_ids=[device],
             process_group=dist.new_group())
 
-    criterion = getattr(torch.nn, args.criterion)
+    criterion = getattr(nn, args.criterion)
     criterion = criterion()
     criterion.to(device)
 
@@ -140,7 +141,7 @@ def gpu_worker(local_rank, node, args):
         adv_model = DistributedDataParallel(adv_model, device_ids=[device],
                 process_group=dist.new_group())
 
-        adv_criterion = getattr(torch.nn, args.adv_criterion)
+        adv_criterion = getattr(nn, args.adv_criterion)
         adv_criterion = adv_criterion_wrapper(adv_criterion)
         adv_criterion = adv_criterion(reduction='min' if args.min_reduction else 'mean')
         adv_criterion.to(device)
@@ -178,15 +179,22 @@ def gpu_worker(local_rank, node, args):
 
         del state
     else:
-#        def init_weights(m):
-#            classname = m.__class__.__name__
-#            if isinstance(m, (torch.nn.Conv3d, torch.nn.ConvTranspose3d)):
-#                m.weight.data.normal_(0.0, 0.02)
-#            elif isinstance(m, torch.nn.BatchNorm3d):
-#                m.weight.data.normal_(1.0, 0.02)
-#                m.bias.data.fill_(0)
-#        model.apply(init_weights)
-#
+        def init_weights(m):
+            if isinstance(m, (nn.Linear, nn.Conv1d, nn.Conv2d, nn.Conv3d,
+                nn.ConvTranspose1d, nn.ConvTranspose2d, nn.ConvTranspose3d)):
+                m.weight.data.normal_(0.0, args.init_weight_scale)
+            elif isinstance(m, (nn.BatchNorm1d, nn.BatchNorm2d, nn.BatchNorm3d,
+                nn.SyncBatchNorm, nn.LayerNorm, nn.GroupNorm,
+                nn.InstanceNorm1d, nn.InstanceNorm2d, nn.InstanceNorm3d)):
+                if m.affine:
+                    # NOTE: dispersion from DCGAN, why?
+                    m.weight.data.normal_(1.0, args.init_weight_scale)
+                    m.bias.data.fill_(0)
+        if args.init_weight_scale is not None:
+            model.apply(init_weights)
+            if args.adv:
+                adv_model.apply(init_weights)
+
         start_epoch = 0
 
         if rank == 0:
@@ -454,6 +462,9 @@ def set_runtime_default_args(args):
             args.adv_lr = args.lr
         if args.adv_weight_decay is None:
             args.adv_weight_decay = args.weight_decay
+
+        if args.init_weight_scale is None:
+            args.init_weight_scale = 0.02
 
 
 def dist_init(rank, args):

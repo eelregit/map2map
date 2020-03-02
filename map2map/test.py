@@ -11,6 +11,7 @@ from .state import load_model_state_dict
 
 def test(args):
     pprint(vars(args))
+    sys.stdout.flush()
 
     test_dataset = FieldDataset(
         in_patterns=args.test_in_patterns,
