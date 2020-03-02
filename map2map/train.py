@@ -348,6 +348,25 @@ def train(epoch, loader, model, criterion, optimizer, scheduler,
                             'real': adv_loss_real.item(),
                         }, global_step=batch)
 
+                # gradients of the weights of the first and the last layer
+                grads = list(p.grad for n, p in model.named_parameters()
+                        if n.endswith('weight'))
+                grads = [grads[0], grads[1]]
+                grads = [g.detach().norm().item() for g in grads]
+                logger.add_scalars('grad', {
+                        'first': grads[0],
+                        'last': grads[1],
+                    }, global_step=batch)
+                if args.adv and epoch >= args.adv_start:
+                    grads = list(p.grad for n, p in adv_model.named_parameters()
+                            if n.endswith('weight'))
+                    grads = [grads[0], grads[1]]
+                    grads = [g.detach().norm().item() for g in grads]
+                    logger.add_scalars('grad/adv', {
+                            'first': grads[0],
+                            'last': grads[1],
+                        }, global_step=batch)
+
     dist.all_reduce(epoch_loss)
     epoch_loss /= len(loader) * world_size
     if rank == 0:
