@@ -9,3 +9,4 @@ from .dice import DiceLoss, dice_loss
 
 from .adversary import adv_model_wrapper, adv_criterion_wrapper
 from .spectral_norm import add_spectral_norm, rm_spectral_norm
+from .instance_noise import InstanceNoise

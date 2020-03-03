@@ -79,12 +79,14 @@ def add_train_args(parser):
     parser.add_argument('--adv-start', default=0, type=int,
             help='epoch to start adversarial training')
     parser.add_argument('--adv-label-smoothing', default=1, type=float,
-            help='label of real samples for discriminator, '
+            help='label of real samples for the adversary model, '
             'e.g. 0.9 for label smoothing and 1 to disable')
     parser.add_argument('--loss-fraction', default=0.5, type=float,
             help='final fraction of loss (vs adv-loss)')
     parser.add_argument('--loss-halflife', default=20, type=float,
             help='half-life (epoch) to anneal loss while enhancing adv-loss')
+    parser.add_argument('--instance-noise', default=0, type=float,
+            help='noise added to the adversary inputs to stabilize training')
 
     parser.add_argument('--optimizer', default='Adam', type=str,
             help='optimizer from torch.optim')

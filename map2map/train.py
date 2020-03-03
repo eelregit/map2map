@@ -19,7 +19,8 @@ from .data.figures import fig3d
 from . import models
 from .models import (narrow_like,
         adv_model_wrapper, adv_criterion_wrapper,
-        add_spectral_norm, rm_spectral_norm)
+        add_spectral_norm, rm_spectral_norm,
+        InstanceNoise)
 from .state import load_model_state_dict
 
 
@@ -210,6 +211,9 @@ def gpu_worker(local_rank, node, args):
         pprint(vars(args))
         sys.stdout.flush()
 
+    if args.adv:
+        args.instance_noise = InstanceNoise(args.instance_noise)
+
     for epoch in range(start_epoch, args.epochs):
         if not args.div_data:
             train_sampler.set_epoch(epoch)
@@ -297,6 +301,16 @@ def train(epoch, loader, model, criterion, optimizer, scheduler,
         epoch_loss[0] += loss.item()
 
         if args.adv and epoch >= args.adv_start:
+            try:
+                noise_std = args.instance_noise.std(adv_loss)
+            except NameError:
+                noise_std = args.instance_noise.std(0)
+            if noise_std > 0:
+                noise = noise_std * torch.randn_like(output)
+                output = output + noise.detach()
+                target = target + noise.detach()
+                del noise
+
             if args.cgan:
                 output = torch.cat([input, output], dim=1)
                 target = torch.cat([input, target], dim=1)
@@ -366,6 +380,10 @@ def train(epoch, loader, model, criterion, optimizer, scheduler,
                             'first': grads[0],
                             'last': grads[1],
                         }, global_step=batch)
+
+                if args.adv and epoch >= args.adv_start:
+                    logger.add_scalar('instance_noise', noise_std,
+                            global_step=batch)
 
     dist.all_reduce(epoch_loss)
     epoch_loss /= len(loader) * world_size
