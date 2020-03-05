@@ -11,3 +11,7 @@ def main():
         train.node_worker(args)
     elif args.mode == 'test':
         test.test(args)
+
+
+if __name__ == '__main__':
+    main()
