@@ -261,11 +261,7 @@ def gpu_worker(local_rank, node, args):
             state_file = 'state_{}.pth'
             torch.save(state, ckpt_file)
             del state
-
-            if good:
-                shutil.copyfile(ckpt_file, state_file.format(epoch + 1))
-                #if os.path.isfile(state_file.format(epoch)):
-                #    os.remove(state_file.format(epoch))
+            shutil.copyfile(ckpt_file, state_file.format(epoch + 1))
 
     dist.destroy_process_group()
 
