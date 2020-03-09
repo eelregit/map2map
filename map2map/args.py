@@ -87,6 +87,8 @@ def add_train_args(parser):
             help='half-life (epoch) to anneal loss while enhancing adv-loss')
     parser.add_argument('--instance-noise', default=0, type=float,
             help='noise added to the adversary inputs to stabilize training')
+    parser.add_argument('--instance-noise-batches', default=1e4, type=float,
+            help='noise annealing duration')
 
     parser.add_argument('--optimizer', default='Adam', type=str,
             help='optimizer from torch.optim')

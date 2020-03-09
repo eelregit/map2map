@@ -216,7 +216,8 @@ def gpu_worker(local_rank, node, args):
         sys.stdout.flush()
 
     if args.adv:
-        args.instance_noise = InstanceNoise(args.instance_noise)
+        args.instance_noise = InstanceNoise(args.instance_noise,
+                                            args.instance_noise_batches)
 
     for epoch in range(start_epoch, args.epochs):
         if not args.div_data:
