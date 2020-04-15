@@ -95,9 +95,9 @@ class ResBlock(nn.Module):
 
         self.conv = nn.Sequential(
             nn.Conv3d(in_chan, in_chan, 3),
-            nn.LeakyReLU(0.2, True)
+            nn.LeakyReLU(0.2, True),
             nn.Conv3d(in_chan, out_chan, 2, stride=2),
-            nn.LeakyReLU(0.2, True)
+            nn.LeakyReLU(0.2, True),
         )
 
         self.skip = get_resampler(3, 0.5)
