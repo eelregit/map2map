@@ -107,4 +107,4 @@ class ResBlock(nn.Module):
     def forward(self, x):
         y = self.conv(x)
         x = narrow_like(x, y)
-        return x + res
+        return x + y
