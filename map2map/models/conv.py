@@ -116,6 +116,16 @@ class ResBlock(ConvBlock):
         return x
 
 
+def narrow_by(a, c):
+    """Narrow a by size c symmetrically on all sides
+    """
+    assert isinstance(c, int)
+
+    for d in range(2, a.dim()):
+        a = a.narrow(d, c, a.shape[d] - 2 * c)
+    return a
+
+
 def narrow_like(a, b):
     """Narrow a to be like b.
 
