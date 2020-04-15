@@ -82,10 +82,10 @@ class D1(nn.Module):
 class AddNoise(nn.Module):
     def __init__(self):
         super().__init__()
-        self.amp = nn.Parameter(torch.zeros([1]))
+        self.std = nn.Parameter(torch.zeros([1]))
 
     def forward(self, x):
-        noise = self.amp * torch.randn_like(x[:, 0])
+        noise = self.std * torch.randn_like(x[:, 0])
         return x + noise
 
 
