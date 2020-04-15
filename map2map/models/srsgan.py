@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 
-from .resample import get_resampler
+from .resample import get_resampler, Resampler
 from .conv import narrow_by, narrow_like
 
 
@@ -102,9 +102,13 @@ class ResBlock(nn.Module):
             nn.LeakyReLU(0.2, True),
         )
 
-        self.skip = get_resampler(3, 0.5)
+        self.skip = nn.Sequential(
+            nn.Conv3d(in_chan, out_chan, 1),
+            Resampler(3, 0.5),
+        )
 
     def forward(self, x):
         y = self.conv(x)
+        x = self.skip(x)
         x = narrow_like(x, y)
         return x + y
