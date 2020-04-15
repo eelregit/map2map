@@ -292,8 +292,8 @@ def train(epoch, loader, model, criterion, optimizer, scheduler,
         output = model(input)
 
         target = narrow_like(target, output)  # FIXME pad
-        if hasattr(model, 'scale_factor') and model.scale_factor != 1:
-            input = F.interpolate(input, scale_factor=model.scale_factor,
+        if hasattr(model.module, 'scale_factor') and model.module.scale_factor != 1:
+            input = F.interpolate(input, scale_factor=model.module.scale_factor,
                     mode='trilinear', align_corners=False)
         input = narrow_like(input, output)
 
@@ -433,8 +433,8 @@ def validate(epoch, loader, model, criterion, adv_model, adv_criterion,
             output = model(input)
 
             target = narrow_like(target, output)  # FIXME pad
-            if hasattr(model, 'scale_factor') and model.scale_factor != 1:
-                input = F.interpolate(input, scale_factor=model.scale_factor,
+            if hasattr(model.module, 'scale_factor') and model.module.scale_factor != 1:
+                input = F.interpolate(input, scale_factor=model.module.scale_factor,
                         mode='trilinear', align_corners=False)
             input = narrow_like(input, output)
 
