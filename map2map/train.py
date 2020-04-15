@@ -126,7 +126,7 @@ def gpu_worker(local_rank, node, args):
         model.parameters(),
         lr=args.lr,
         #momentum=args.momentum,
-        betas=(0.5, 0.999),
+        betas=(0, 0.99),
         weight_decay=args.weight_decay,
     )
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer,
