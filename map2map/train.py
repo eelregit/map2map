@@ -66,7 +66,6 @@ def gpu_worker(local_rank, node, args):
         crop=args.crop,
         pad=args.pad,
         scale_factor=args.scale_factor,
-        noise_chan=args.noise_chan,
         cache=args.cache,
         div_data=args.div_data,
         rank=rank,
@@ -96,7 +95,6 @@ def gpu_worker(local_rank, node, args):
             crop=args.crop,
             pad=args.pad,
             scale_factor=args.scale_factor,
-            noise_chan=args.noise_chan,
             cache=args.cache,
             div_data=args.div_data,
             rank=rank,
@@ -119,7 +117,7 @@ def gpu_worker(local_rank, node, args):
     args.in_chan, args.out_chan = train_dataset.in_chan, train_dataset.tgt_chan
 
     model = getattr(models, args.model)
-    model = model(sum(args.in_chan) + args.noise_chan, sum(args.out_chan))
+    model = model(sum(args.in_chan), sum(args.out_chan))
     model.to(device)
     model = DistributedDataParallel(model, device_ids=[device],
             process_group=dist.new_group())
@@ -306,8 +304,6 @@ def train(epoch, loader, model, criterion, optimizer, scheduler,
         output = model(input)
 
         target = narrow_like(target, output)  # FIXME pad
-        if args.noise_chan > 0:
-            input = input[:, :-args.noise_chan]  # remove noise channels
         if hasattr(model, 'scale_factor') and model.scale_factor != 1:
             input = F.interpolate(input,
                     scale_factor=model.scale_factor, mode='nearest')
@@ -450,8 +446,6 @@ def validate(epoch, loader, model, criterion, adv_model, adv_criterion,
             output = model(input)
 
             target = narrow_like(target, output)  # FIXME pad
-            if args.noise_chan > 0:
-                input = input[:, :-args.noise_chan]  # remove noise channels
             if hasattr(model, 'scale_factor') and model.scale_factor != 1:
                 input = F.interpolate(input,
                         scale_factor=model.scale_factor, mode='nearest')

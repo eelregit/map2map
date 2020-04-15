@@ -27,8 +27,6 @@ class FieldDataset(Dataset):
     the input for super-resolution, in which case `crop` and `pad` are sizes of
     the input resolution.
 
-    Noise channels can be concatenated to the input.
-
     `cache` enables data caching.
     `div_data` enables data division, useful when combined with caching.
     """
@@ -141,11 +139,6 @@ class FieldDataset(Dataset):
         if self.tgt_norms is not None:
             for norm, x in zip(self.tgt_norms, tgt_fields):
                 norm(x)
-
-        if self.noise_chan > 0:
-            in_fields.append(
-                torch.randn((self.noise_chan,) + in_fields[0].shape[1:],
-                    dtype=torch.float32))
 
         in_fields = torch.cat(in_fields, dim=0)
         tgt_fields = torch.cat(tgt_fields, dim=0)
