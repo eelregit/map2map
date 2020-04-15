@@ -28,9 +28,6 @@ def add_common_args(parser):
     parser.add_argument('--scale-factor', default=1, type=int,
             help='input upsampling factor for super-resolution purpose, in '
             'which case crop and pad will be taken at the original resolution')
-    parser.add_argument('--noise-chan', default=0, type=int,
-            help='input noise channels to produce the output stochasticity, '
-            'if the input does not completely determines the output')
 
     parser.add_argument('--model', required=True, type=str,
             help='model from .models')
