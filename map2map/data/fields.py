@@ -32,8 +32,11 @@ class FieldDataset(Dataset):
     `cache` enables data caching.
     `div_data` enables data division, useful when combined with caching.
     """
-    def __init__(self, in_patterns, tgt_patterns, in_norms=None, tgt_norms=None,
-            augment=False, crop=None, pad=0, scale_factor=1, noise_chan=0,
+    def __init__(self, in_patterns, tgt_patterns,
+            in_norms=None, tgt_norms=None,
+            augment=False, crop=None, pad=0,
+            scale_factor=1, upsample=False,
+            noise_chan=0,
             cache=False, div_data=False, rank=None, world_size=None):
         in_file_lists = [sorted(glob(p)) for p in in_patterns]
         self.in_files = list(zip(* in_file_lists))
@@ -88,6 +91,7 @@ class FieldDataset(Dataset):
         assert isinstance(scale_factor, int) and scale_factor >= 1, \
                 "only support integer upsampling"
         self.scale_factor = scale_factor
+        self.upsample = upsample
 
         assert isinstance(noise_chan, int) and noise_chan >= 0, \
                 "only support integer noise channels"
@@ -118,7 +122,8 @@ class FieldDataset(Dataset):
             in_fields = [np.load(f) for f in self.in_files[idx]]
             tgt_fields = [np.load(f) for f in self.tgt_files[idx]]
 
-        in_fields = crop(in_fields, start, self.crop, self.pad, self.scale_factor)
+        in_fields = crop(in_fields, start, self.crop, self.pad,
+                self.scale_factor if self.upsample else 1)
         tgt_fields = crop(tgt_fields, start * self.scale_factor,
                 self.crop * self.scale_factor, np.zeros_like(self.pad))
 
