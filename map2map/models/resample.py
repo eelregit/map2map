@@ -7,7 +7,8 @@ def get_resampler(ndim, scale_factor):
     modes = {1: 'linear', 2: 'bilinear', 3:'trilinear'}
     mode = modes[ndim]
 
-    resampler = partial(F.interpolate, scale_factor=scale_factor, mode=mode)
+    resampler = partial(F.interpolate, scale_factor=scale_factor,
+            mode=mode, align_corners=False)
 
     return resampler
 

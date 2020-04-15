@@ -297,8 +297,8 @@ def train(epoch, loader, model, criterion, optimizer, scheduler,
         if args.noise_chan > 0:
             input = input[:, :-args.noise_chan]  # remove noise channels
         if hasattr(model, 'scale_factor') and model.scale_factor != 1:
-            input = F.interpolate(input,
-                    scale_factor=model.scale_factor, mode='nearest')
+            input = F.interpolate(input, scale_factor=model.scale_factor,
+                    mode='trilinear', align_corners=False)
         input = narrow_like(input, output)
 
         loss = criterion(output, target)
@@ -440,8 +440,8 @@ def validate(epoch, loader, model, criterion, adv_model, adv_criterion,
             if args.noise_chan > 0:
                 input = input[:, :-args.noise_chan]  # remove noise channels
             if hasattr(model, 'scale_factor') and model.scale_factor != 1:
-                input = F.interpolate(input,
-                        scale_factor=model.scale_factor, mode='nearest')
+                input = F.interpolate(input, scale_factor=model.scale_factor,
+                        mode='trilinear', align_corners=False)
             input = narrow_like(input, output)
 
             loss = criterion(output, target)
