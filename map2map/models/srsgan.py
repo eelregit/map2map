@@ -46,6 +46,8 @@ class G1(nn.Module):
             nn.LeakyReLU(0.2, True),
         )
 
+        self.scale_factor = 4
+
     def forward(self, x):
         x = self.conv0(x)
 
