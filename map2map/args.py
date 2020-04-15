@@ -101,9 +101,8 @@ def add_train_args(parser):
             help='adversary weight decay')
     parser.add_argument('--reduce-lr-on-plateau', action='store_true',
             help='Enable ReduceLROnPlateau learning rate scheduler')
-    parser.add_argument('--init-weight-scale', type=float,
-            help='weight initialization scale, default is 0.02 with adversary '
-            'and the pytorch default without it')
+    parser.add_argument('--init-weight-std', type=float,
+            help='weight initialization std')
     parser.add_argument('--epochs', default=128, type=int,
             help='total number of epochs to run')
     parser.add_argument('--seed', default=42, type=int,
