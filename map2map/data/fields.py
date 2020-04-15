@@ -44,7 +44,7 @@ class FieldDataset(Dataset):
         assert len(self.in_files) == len(self.tgt_files), \
                 'input and target sample sizes do not match'
 
-        assert len(self.in_files) > 0, 'file not found'
+        assert len(self.in_files) > 0, 'file not found for {}'.format(in_patterns)
 
         if div_data:
             files = len(self.in_files) // world_size
