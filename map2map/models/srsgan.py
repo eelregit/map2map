@@ -75,6 +75,8 @@ class D1(nn.Module):
             ResBlock(128, 256),
             ResBlock(256, 512),
             nn.Conv3d(512, 1024, 1),
+            nn.LeakyReLU(0.2, True),
+            nn.Conv3d(1024, 1, 1),
         )
 
     def forward(self, x):
