@@ -93,7 +93,8 @@ class AddNoise(nn.Module):
         self.std = nn.Parameter(torch.zeros([1]))
 
     def forward(self, x):
-        rstd = 1 / x.std(dim=x.shape[2:], keepdim=True)
+        dims = list(range(2, x.dim()))
+        rstd = 1 / x.std(dim=dims, keepdim=True)
         x = x * rstd
         noise = self.std * torch.randn_like(x[:, 0])
         return x + noise
