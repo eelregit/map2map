@@ -82,11 +82,17 @@ class D1(nn.Module):
 
 
 class AddNoise(nn.Module):
+    """Normalize std and then add noise.
+
+    See Fig. 2(c) in https://arxiv.org/abs/1912.04958
+    """
     def __init__(self):
         super().__init__()
         self.std = nn.Parameter(torch.zeros([1]))
 
     def forward(self, x):
+        rstd = 1 / x.std(dim=x.shape[2:], keepdim=True)
+        x = x * rstd
         noise = self.std * torch.randn_like(x[:, 0])
         return x + noise
 
