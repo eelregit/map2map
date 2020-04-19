@@ -18,31 +18,31 @@ class G1(nn.Module):
 
         self.conv1 = nn.Sequential(
             nn.ConvTranspose3d(512, 256, 2, stride=2),
-            AddNoise(),
+            AddNoise(256),
             nn.LeakyReLU(0.2, True),
             nn.Conv3d(256, 256, 3),
-            AddNoise(),
+            AddNoise(256),
             nn.LeakyReLU(0.2, True),
         )
 
         self.conv2 = nn.Sequential(
             nn.ConvTranspose3d(256, 128, 2, stride=2),
-            AddNoise(),
+            AddNoise(128),
             nn.LeakyReLU(0.2, True),
             nn.Conv3d(128, 128, 3),
-            AddNoise(),
+            AddNoise(128),
             nn.LeakyReLU(0.2, True),
         )
 
         self.proj1 = nn.Sequential(
             nn.Conv3d(256, out_chan, 1),
-            AddNoise(),
+            AddNoise(out_chan),
             nn.LeakyReLU(0.2, True),
         )
 
         self.proj2 = nn.Sequential(
             nn.Conv3d(128, out_chan, 1),
-            AddNoise(),
+            AddNoise(out_chan),
             nn.LeakyReLU(0.2, True),
         )
 
@@ -87,11 +87,13 @@ class AddNoise(nn.Module):
     """Normalize std and then add noise.
 
     See Fig. 2(c) in https://arxiv.org/abs/1912.04958
+
+    Number of channels should be 1 (StyleGAN2) or that of the input (StyleGAN).
     """
-    def __init__(self, norm_std=False):
+    def __init__(self, chan, norm_std=False):
         super().__init__()
+        self.std = nn.Parameter(torch.zeros([chan]))
         self.norm_std = norm_std
-        self.std = nn.Parameter(torch.zeros([1]))
 
     def forward(self, x):
         if self.norm_std:
@@ -99,7 +101,8 @@ class AddNoise(nn.Module):
             rstd = 1 / x.std(dim=dims, keepdim=True)
             x = x * rstd
 
-        noise = self.std * torch.randn_like(x[:, 0])
+        std_shape = (-1,) + (1,) * (x.dim() - 2)
+        noise = self.std.view(std_shape) * torch.randn_like(x[:, :1])
 
         return x + noise
 
