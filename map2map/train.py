@@ -308,14 +308,11 @@ def train(epoch, loader, model, criterion, optimizer, scheduler,
         epoch_loss[0] += loss.item()
 
         if args.adv and epoch >= args.adv_start:
-            try:
-                noise_std = args.instance_noise.std(adv_loss)
-            except NameError:
-                noise_std = args.instance_noise.std(0)
+            noise_std = args.instance_noise.std()
             if noise_std > 0:
                 noise = noise_std * torch.randn_like(output)
                 output = output + noise.detach()
-                noise = noise_std * torch.randn_like(output)
+                noise = noise_std * torch.randn_like(target)
                 target = target + noise.detach()
                 del noise
 

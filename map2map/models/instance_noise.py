@@ -2,14 +2,14 @@ from math import log
 import torch
 
 class InstanceNoise:
-    """Instance noise, with a heuristic decaying schedule
+    """Instance noise, with a linear decaying schedule
     """
     def __init__(self, init_std, batches):
+        assert init_std >= 0, 'Noise std cannot be negative'
         self.init_std = init_std
         self._std = init_std
         self.batches = batches
 
-    def std(self, adv_loss):
+    def std(self):
         self._std -= self.init_std / self.batches
-        self._std = self._std if self._std > 0 else 0
-        return self._std
+        return max(self._std, 0)
