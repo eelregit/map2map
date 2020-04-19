@@ -315,6 +315,7 @@ def train(epoch, loader, model, criterion, optimizer, scheduler,
             if noise_std > 0:
                 noise = noise_std * torch.randn_like(output)
                 output = output + noise.detach()
+                noise = noise_std * torch.randn_like(output)
                 target = target + noise.detach()
                 del noise
 
@@ -388,7 +389,7 @@ def train(epoch, loader, model, criterion, optimizer, scheduler,
                             'last': grads[-1],
                         }, global_step=batch)
 
-                if args.adv and epoch >= args.adv_start:
+                if args.adv and epoch >= args.adv_start and noise_std > 0:
                     logger.add_scalar('instance_noise', noise_std,
                             global_step=batch)
 
