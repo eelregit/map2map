@@ -88,15 +88,19 @@ class AddNoise(nn.Module):
 
     See Fig. 2(c) in https://arxiv.org/abs/1912.04958
     """
-    def __init__(self):
+    def __init__(self, norm_std=False):
         super().__init__()
+        self.norm_std = norm_std
         self.std = nn.Parameter(torch.zeros([1]))
 
     def forward(self, x):
-        dims = list(range(2, x.dim()))
-        rstd = 1 / x.std(dim=dims, keepdim=True)
-        x = x * rstd
+        if self.norm_std:
+            dims = list(range(2, x.dim()))
+            rstd = 1 / x.std(dim=dims, keepdim=True)
+            x = x * rstd
+
         noise = self.std * torch.randn_like(x[:, 0])
+
         return x + noise
 
 
