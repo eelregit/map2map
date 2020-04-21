@@ -542,6 +542,7 @@ def dist_init(rank, args):
         world_size=args.world_size,
         rank=rank,
     )
+    dist.barrier()
 
     if rank == 0:
         os.remove(dist_file)
