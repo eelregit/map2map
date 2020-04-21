@@ -23,6 +23,9 @@ from .models import (narrow_like,
 from .state import load_model_state_dict
 
 
+ckpt_link = 'checkpoint.pth'
+
+
 def node_worker(args):
     if 'SLURM_STEP_NUM_NODES' in os.environ:
         args.nodes = int(os.environ['SLURM_STEP_NUM_NODES'])
@@ -163,7 +166,31 @@ def gpu_worker(local_rank, node, args):
         adv_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(adv_optimizer,
             factor=0.1, patience=10, verbose=True)
 
-    if args.load_state:
+    if (args.load_state == ckpt_link and not os.path.isfile(ckpt_link)
+            or not args.load_state):
+        def init_weights(m):
+            if isinstance(m, (nn.Linear, nn.Conv1d, nn.Conv2d, nn.Conv3d,
+                nn.ConvTranspose1d, nn.ConvTranspose2d, nn.ConvTranspose3d)):
+                m.weight.data.normal_(0.0, args.init_weight_scale)
+            elif isinstance(m, (nn.BatchNorm1d, nn.BatchNorm2d, nn.BatchNorm3d,
+                nn.SyncBatchNorm, nn.LayerNorm, nn.GroupNorm,
+                nn.InstanceNorm1d, nn.InstanceNorm2d, nn.InstanceNorm3d)):
+                if m.affine:
+                    # NOTE: dispersion from DCGAN, why?
+                    m.weight.data.normal_(1.0, args.init_weight_scale)
+                    m.bias.data.fill_(0)
+
+        if args.init_weight_scale is not None:
+            model.apply(init_weights)
+
+            if args.adv:
+                adv_model.apply(init_weights)
+
+        start_epoch = 0
+
+        if rank == 0:
+            min_loss = None
+    else:
         state = torch.load(args.load_state, map_location=device)
 
         start_epoch = state['epoch']
@@ -181,31 +208,11 @@ def gpu_worker(local_rank, node, args):
             min_loss = state['min_loss']
             if args.adv and 'adv_model' not in state:
                 min_loss = None  # restarting with adversary wipes the record
+
             print('state at epoch {} loaded from {}'.format(
                 state['epoch'], args.load_state), flush=True)
 
         del state
-    else:
-        def init_weights(m):
-            if isinstance(m, (nn.Linear, nn.Conv1d, nn.Conv2d, nn.Conv3d,
-                nn.ConvTranspose1d, nn.ConvTranspose2d, nn.ConvTranspose3d)):
-                m.weight.data.normal_(0.0, args.init_weight_scale)
-            elif isinstance(m, (nn.BatchNorm1d, nn.BatchNorm2d, nn.BatchNorm3d,
-                nn.SyncBatchNorm, nn.LayerNorm, nn.GroupNorm,
-                nn.InstanceNorm1d, nn.InstanceNorm2d, nn.InstanceNorm3d)):
-                if m.affine:
-                    # NOTE: dispersion from DCGAN, why?
-                    m.weight.data.normal_(1.0, args.init_weight_scale)
-                    m.bias.data.fill_(0)
-        if args.init_weight_scale is not None:
-            model.apply(init_weights)
-            if args.adv:
-                adv_model.apply(init_weights)
-
-        start_epoch = 0
-
-        if rank == 0:
-            min_loss = None
 
     torch.backends.cudnn.benchmark = True  # NOTE: test perf
 
@@ -248,8 +255,8 @@ def gpu_worker(local_rank, node, args):
             except AttributeError:
                 logger.close()  # old pytorch
 
-            good = min_loss is None or epoch_loss[0] < min_loss[0]
-            if good and epoch >= args.adv_start:
+            if ((min_loss is None or epoch_loss[0] < min_loss[0])
+                    and epoch >= args.adv_start):
                 min_loss = epoch_loss
 
             state = {
@@ -265,7 +272,6 @@ def gpu_worker(local_rank, node, args):
             torch.save(state, state_file)
             del state
 
-            ckpt_link = 'checkpoint.pth'
             tmp_link = '{}.pth'.format(time.time())
             os.symlink(state_file, tmp_link)  # workaround to overwrite
             os.rename(tmp_link, ckpt_link)

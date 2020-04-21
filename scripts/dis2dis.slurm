@@ -41,7 +41,6 @@ srun m2m.py train \
     --lr 0.0001 --adv-lr 0.0004 --batches 1 --loader-workers 0 \
     --epochs 1024 --seed $RANDOM \
     --cache --div-data
-#    --load-state checkpoint.pth \
 
 
 date
