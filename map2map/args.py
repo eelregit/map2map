@@ -1,11 +1,18 @@
-from argparse import ArgumentParser
+import argparse
 
 
 def get_args():
-    parser = ArgumentParser(description='Transform field(s) to field(s)')
+    parser = argparse.ArgumentParser(
+        description='Transform field(s) to field(s)')
     subparsers = parser.add_subparsers(title='modes', dest='mode', required=True)
-    train_parser = subparsers.add_parser('train')
-    test_parser = subparsers.add_parser('test')
+    train_parser = subparsers.add_parser(
+        'train',
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    )
+    test_parser = subparsers.add_parser(
+        'test',
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    )
 
     add_train_args(train_parser)
     add_test_args(test_parser)
