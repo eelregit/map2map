@@ -35,6 +35,9 @@ def node_worker(args):
 
     node = int(os.environ['SLURM_NODEID'])
 
+    if args.gpus_per_node < 1:
+        raise RuntimeError('GPU not found on node {}'.format(node))
+
     spawn(gpu_worker, args=(node, args), nprocs=args.gpus_per_node)
 
 
