@@ -43,7 +43,6 @@ srun m2m.py train \
     --cache --div-data
 #    --val-in-patterns "$data_root_dir/$in_dir/$val_dirs/$in_files_1,$data_root_dir/$in_dir/$val_dirs/$in_files_2" \
 #    --val-tgt-patterns "$data_root_dir/$tgt_dir/$val_dirs/$tgt_files_1,$data_root_dir/$tgt_dir/$val_dirs/$tgt_files_2" \
-#    --load-state checkpoint.pth \
 
 
 date

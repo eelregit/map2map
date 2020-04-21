@@ -1,11 +1,20 @@
-from argparse import ArgumentParser
+import argparse
+
+from .train import ckpt_link
 
 
 def get_args():
-    parser = ArgumentParser(description='Transform field(s) to field(s)')
+    parser = argparse.ArgumentParser(
+        description='Transform field(s) to field(s)')
     subparsers = parser.add_subparsers(title='modes', dest='mode', required=True)
-    train_parser = subparsers.add_parser('train')
-    test_parser = subparsers.add_parser('test')
+    train_parser = subparsers.add_parser(
+        'train',
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    )
+    test_parser = subparsers.add_parser(
+        'test',
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    )
 
     add_train_args(train_parser)
     add_test_args(test_parser)
@@ -33,8 +42,10 @@ def add_common_args(parser):
             help='model from .models')
     parser.add_argument('--criterion', default='MSELoss', type=str,
             help='model criterion from torch.nn')
-    parser.add_argument('--load-state', default='', type=str,
-            help='path to load the states of model, optimizer, rng, etc.')
+    parser.add_argument('--load-state', default=ckpt_link, type=str,
+            help='path to load the states of model, optimizer, rng, etc. '
+            'Default is the checkpoint. '
+            'Start from scratch if the checkpoint does not exist')
     parser.add_argument('--load-state-non-strict', action='store_false',
             help='allow incompatible keys when loading model states',
             dest='load_state_strict')
