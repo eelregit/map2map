@@ -421,6 +421,7 @@ def train(epoch, loader, model, criterion, optimizer, scheduler,
                 output[-1, skip_chan:],
                 target[-1, skip_chan:],
                 output[-1, skip_chan:] - target[-1, skip_chan:],
+                title=['in', 'out', 'tgt', 'out - tgt'],
             ), global_step=epoch+1)
 
     return epoch_loss
@@ -495,6 +496,7 @@ def validate(epoch, loader, model, criterion, adv_model, adv_criterion,
                 output[-1, skip_chan:],
                 target[-1, skip_chan:],
                 output[-1, skip_chan:] - target[-1, skip_chan:],
+                title=['in', 'out', 'tgt', 'out - tgt'],
             ), global_step=epoch+1)
 
     return epoch_loss
