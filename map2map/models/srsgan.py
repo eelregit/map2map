@@ -1,130 +1,208 @@
+from math import log2
 import torch
 import torch.nn as nn
 
-from .resample import get_resampler, Resampler
-from .conv import narrow_by, narrow_like
+from .narrow import narrow_by, narrow_like
+from .resample import Resampler
 
 
 class G1(nn.Module):
-    def __init__(self, in_chan, out_chan):
+    def __init__(self, in_chan, out_chan, scale_factor=16,
+                 chan_base=512, chan_min=64, chan_max=512, cat_noise=True):
         super().__init__()
 
-        self.upsample = get_resampler(3, 2)
+        self.scale_factor = scale_factor
+        num_blocks = round(log2(self.scale_factor))
 
-        self.conv0 = nn.Sequential(
-            nn.Conv3d(in_chan, 512, 5),
+        assert chan_min <= chan_max
+
+        def chan(b):
+            c = chan_base >> b
+            c = max(c, chan_min)
+            c = min(c, chan_max)
+            return c
+
+        self.block0 = nn.Sequential(
+            nn.Conv3d(in_chan, chan(0), 1),
             nn.LeakyReLU(0.2, True),
         )
 
-        self.conv1 = nn.Sequential(
-            nn.ConvTranspose3d(512, 256, 2, stride=2),
-            AddNoise(256),
-            nn.LeakyReLU(0.2, True),
-            nn.Conv3d(256, 256, 3),
-            AddNoise(256),
-            nn.LeakyReLU(0.2, True),
-        )
-
-        self.conv2 = nn.Sequential(
-            nn.ConvTranspose3d(256, 128, 2, stride=2),
-            AddNoise(128),
-            nn.LeakyReLU(0.2, True),
-            nn.Conv3d(128, 128, 3),
-            AddNoise(128),
-            nn.LeakyReLU(0.2, True),
-        )
-
-        self.proj1 = nn.Sequential(
-            nn.Conv3d(256, out_chan, 1),
-            AddNoise(out_chan),
-            nn.LeakyReLU(0.2, True),
-        )
-
-        self.proj2 = nn.Sequential(
-            nn.Conv3d(128, out_chan, 1),
-            AddNoise(out_chan),
-            nn.LeakyReLU(0.2, True),
-        )
-
-        self.scale_factor = 4
+        self.blocks = []
+        for b in range(num_blocks):
+            prev_chan, next_chan = chan(b), chan(b+1)
+            self.blocks.append(
+                SkipBlock(prev_chan, next_chan, out_chan, cat_noise))
 
     def forward(self, x):
-        x = self.conv0(x)
+        x = self.block0(x)
 
-        x = self.conv1(x)
-
-        y = self.proj1(x)
-        y = self.upsample(y)
-        y = narrow_by(y, 1)
-
-        x = self.conv2(x)
-
-        x = self.proj2(x)
-        x = narrow_like(x, y)
-        y = y + x
+        y = None
+        for block in self.blocks:
+            x, y = block(x, y)
 
         return y
 
 
-class D1(nn.Module):
-    def __init__(self, in_chan, out_chan):
+class SkipBlock(nn.Module):
+    """The "I" block of the StyleGAN2 generator.
+
+        x_p                     y_p
+         |                       |
+    convolution          bilinear upsample
+         |                       |
+          >--- projection ------>+
+         |                       |
+         v                       v
+        x_n                     y_n
+
+    See Fig. 7 (b) upper in https://arxiv.org/abs/1912.04958
+    Upsampling are all bilinear, no transposed convolution.
+
+    Parameters
+    ----------
+    prev_chan : number of channels of x_p
+    next_chan : number of channels of x_n
+    out_chan : number of channels of y_p and y_n
+    cat_noise: concatenate noise if True, otherwise add noise
+
+    Notes
+    -----
+    out_size = 2 * in_size - 6
+    """
+    def __init__(self, prev_chan, next_chan, out_chan, cat_noise):
         super().__init__()
 
-        self.net = nn.Sequential(
-            ResBlock(in_chan, 128),
-            ResBlock(128, 256),
-            ResBlock(256, 512),
-            nn.Conv3d(512, 1024, 1),
+        self.upsample = Resampler(3, 2)
+
+        self.conv = nn.Sequential(
+            AddNoise(cat_noise, chan=prev_chan),
+            self.upsample,
+            nn.Conv3d(prev_chan + int(cat_noise), next_chan, 3),
             nn.LeakyReLU(0.2, True),
-            nn.Conv3d(1024, 1, 1),
+
+            AddNoise(cat_noise, chan=next_chan),
+            nn.Conv3d(next_chan + int(cat_noise), next_chan, 3),
+            nn.LeakyReLU(0.2, True),
         )
 
-    def forward(self, x):
-        return self.net(x)
+        self.proj = nn.Sequential(
+            AddNoise(cat_noise, chan=next_chan),
+            nn.Conv3d(next_chan + int(cat_noise), out_chan, 1),
+            nn.LeakyReLU(0.2, True),
+        )
+
+    def forward(self, x, y):
+        x = self.conv(x)  # narrow by 3
+
+        if y is None:
+            y = self.proj(x)
+        else:
+            y = self.upsample(y)  # narrow by 1
+
+            y = narrow_by(y, 2)
+
+            y = y + self.proj(x)
+
+        return x, y
 
 
 class AddNoise(nn.Module):
-    """Normalize std and then add noise.
+    """Add or concatenate noise.
 
-    See Fig. 2(c) in https://arxiv.org/abs/1912.04958
-
-    Number of channels should be 1 (StyleGAN2) or that of the input (StyleGAN).
+    Add noise if `cat=False`.
+    The number of channels `chan` should be 1 (StyleGAN2)
+    or that of the input (StyleGAN).
     """
-    def __init__(self, chan, norm_std=False):
+    def __init__(self, cat, chan=1):
         super().__init__()
-        self.std = nn.Parameter(torch.zeros([chan]))
-        self.norm_std = norm_std
+        if not cat:
+            self.std = nn.Parameter(torch.zeros([chan]))
 
     def forward(self, x):
-        if self.norm_std:
-            dims = list(range(2, x.dim()))
-            rstd = 1 / x.std(dim=dims, keepdim=True)
-            x = x * rstd
+        noise = torch.randn_like(x[:, :1])
 
-        std_shape = (-1,) + (1,) * (x.dim() - 2)
-        noise = self.std.view(std_shape) * torch.randn_like(x[:, :1])
+        if cat:
+            x = torch.cat([x, noise], dim=1)
+        else:
+            std_shape = (-1,) + (1,) * (x.dim() - 2)
+            noise = self.std.view(std_shape) * noise
+
+            x = x + noise
 
         return x + noise
 
 
-class ResBlock(nn.Module):
-    def __init__(self, in_chan, out_chan):
+class D1(nn.Module):
+    def __init__(self, in_chan, out_chan, scale_factor=16,
+                 chan_base=512, chan_min=64, chan_max=512):
         super().__init__()
 
-        self.conv = nn.Sequential(
-            nn.Conv3d(in_chan, in_chan, 3),
-            nn.LeakyReLU(0.2, True),
-            nn.Conv3d(in_chan, out_chan, 2, stride=2),
+        self.scale_factor = scale_factor
+        num_blocks = round(log2(self.scale_factor))
+
+        assert chan_min <= chan_max
+
+        def chan(b):
+            if b >= 0:
+                c = chan_base >> b
+            else:
+                c = chan_base << -b
+            c = max(c, chan_min)
+            c = min(c, chan_max)
+            return c
+
+        self.block0 = nn.Sequential(
+            nn.Conv3d(in_chan, chan(num_blocks), 1),
             nn.LeakyReLU(0.2, True),
         )
 
-        self.skip = nn.Sequential(
-            nn.Conv3d(in_chan, out_chan, 1),
-            Resampler(3, 0.5),
+        self.blocks = []
+        for b in reversed(range(num_blocks)):
+            prev_chan, next_chan = chan(b+1), chan(b)
+            self.blocks.append(ResBlock(prev_chan, next_chan))
+
+        self.block9 = nn.Sequential(
+            nn.Conv3d(chan(0), chan(-1), 3),
+            nn.LeakyReLU(0.2, True),
+            nn.Conv3d(chan(-1), chan(-2), 1),
+            nn.LeakyReLU(0.2, True),
+            nn.Conv3d(chan(-2), 1, 1),
         )
 
     def forward(self, x):
+        x = self.block0(x)
+
+        x = self.blocks(x)
+
+        x = self.block9(x)
+
+        return x
+
+
+class ResBlock(nn.Module):
+    def __init__(self, prev_chan, next_chan):
+        super().__init__()
+
+        self.conv = nn.Sequential(
+            nn.Conv3d(prev_chan, prev_chan, 3),
+            nn.LeakyReLU(0.2, True),
+
+            nn.Conv3d(prev_chan, next_chan, 3),
+            nn.LeakyReLU(0.2, True),
+        )
+
+        self.skip = nn.Conv3d(prev_chan, next_chan, 1)
+
+        self.downsample = Resampler(3, 0.5)
+
+    def forward(self, x):
         y = self.conv(x)
+
         x = self.skip(x)
-        x = narrow_like(x, y)
-        return x + y
+        x = narrow_by(x, 2)
+
+        x = x + y
+
+        x = self.downsample(x)
+
+        return x

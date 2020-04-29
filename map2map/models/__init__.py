@@ -4,7 +4,7 @@ from .pyramid import PyramidNet
 from .patchgan import PatchGAN, PatchGAN42
 from .srsgan import G1, D1
 
-from .conv import narrow_like
+from .narrow import narrow_by, narrow_like
 
 from .dice import DiceLoss, dice_loss
 
