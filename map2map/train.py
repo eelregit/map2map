@@ -169,16 +169,16 @@ def gpu_worker(local_rank, node, args):
         def init_weights(m):
             if isinstance(m, (nn.Linear, nn.Conv1d, nn.Conv2d, nn.Conv3d,
                 nn.ConvTranspose1d, nn.ConvTranspose2d, nn.ConvTranspose3d)):
-                m.weight.data.normal_(0.0, args.init_weight_scale)
+                m.weight.data.normal_(0.0, args.init_weight_std)
             elif isinstance(m, (nn.BatchNorm1d, nn.BatchNorm2d, nn.BatchNorm3d,
                 nn.SyncBatchNorm, nn.LayerNorm, nn.GroupNorm,
                 nn.InstanceNorm1d, nn.InstanceNorm2d, nn.InstanceNorm3d)):
                 if m.affine:
                     # NOTE: dispersion from DCGAN, why?
-                    m.weight.data.normal_(1.0, args.init_weight_scale)
+                    m.weight.data.normal_(1.0, args.init_weight_std)
                     m.bias.data.fill_(0)
 
-        if args.init_weight_scale is not None:
+        if args.init_weight_std is not None:
             model.apply(init_weights)
 
             if args.adv:
