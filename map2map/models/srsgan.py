@@ -27,7 +27,7 @@ class G1(nn.Module):
             nn.LeakyReLU(0.2, True),
         )
 
-        self.blocks = []
+        self.blocks = nn.ModuleList()
         for b in range(num_blocks):
             prev_chan, next_chan = chan(b), chan(b+1)
             self.blocks.append(
@@ -159,7 +159,7 @@ class D1(nn.Module):
             nn.LeakyReLU(0.2, True),
         )
 
-        self.blocks = []
+        self.blocks = nn.ModuleList()
         for b in reversed(range(num_blocks)):
             prev_chan, next_chan = chan(b+1), chan(b)
             self.blocks.append(ResBlock(prev_chan, next_chan))
