@@ -5,7 +5,7 @@ from torch.utils.data import DataLoader
 
 from .data import FieldDataset
 from . import models
-from .models import narrow_like
+from .models import narrow_cast
 from .state import load_model_state_dict
 
 
@@ -50,12 +50,7 @@ def test(args):
     with torch.no_grad():
         for i, (input, target) in enumerate(test_loader):
             output = model(input)
-            if args.pad > 0:  # FIXME
-                output = narrow_like(output, target)
-                input = narrow_like(input, target)
-            else:
-                target = narrow_like(target, output)
-                input = narrow_like(input, output)
+            input, output, target = narrow_cast(input, output, target)
 
             loss = criterion(output, target)
 

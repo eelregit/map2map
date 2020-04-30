@@ -16,7 +16,7 @@ from torch.utils.tensorboard import SummaryWriter
 from .data import FieldDataset
 from .data.figures import fig3d
 from . import models
-from .models import (narrow_like,
+from .models import (narrow_cast,
         adv_model_wrapper, adv_criterion_wrapper,
         add_spectral_norm, rm_spectral_norm,
         InstanceNoise)
@@ -307,11 +307,10 @@ def train(epoch, loader, model, criterion, optimizer, scheduler,
             print('output.shape =', output.shape)
             print('target.shape =', target.shape, flush=True)
 
-        target = narrow_like(target, output)  # FIXME pad
         if hasattr(model.module, 'scale_factor') and model.module.scale_factor != 1:
             input = F.interpolate(input, scale_factor=model.module.scale_factor,
                     mode='trilinear', align_corners=False)
-        input = narrow_like(input, output)
+        input, output, target = narrow_cast(input, output, target)
 
         loss = criterion(output, target)
         epoch_loss[0] += loss.item()
@@ -447,11 +446,10 @@ def validate(epoch, loader, model, criterion, adv_model, adv_criterion,
 
             output = model(input)
 
-            target = narrow_like(target, output)  # FIXME pad
             if hasattr(model.module, 'scale_factor') and model.module.scale_factor != 1:
                 input = F.interpolate(input, scale_factor=model.module.scale_factor,
                         mode='trilinear', align_corners=False)
-            input = narrow_like(input, output)
+            input, output, target = narrow_cast(input, output, target)
 
             loss = criterion(output, target)
             epoch_loss[0] += loss.item()
