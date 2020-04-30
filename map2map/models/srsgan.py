@@ -115,13 +115,16 @@ class AddNoise(nn.Module):
     """
     def __init__(self, cat, chan=1):
         super().__init__()
-        if not cat:
+
+        self.cat = cat
+
+        if not self.cat:
             self.std = nn.Parameter(torch.zeros([chan]))
 
     def forward(self, x):
         noise = torch.randn_like(x[:, :1])
 
-        if cat:
+        if self.cat:
             x = torch.cat([x, noise], dim=1)
         else:
             std_shape = (-1,) + (1,) * (x.dim() - 2)
