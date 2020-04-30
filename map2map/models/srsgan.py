@@ -172,7 +172,8 @@ class D1(nn.Module):
     def forward(self, x):
         x = self.block0(x)
 
-        x = self.blocks(x)
+        for block in self.blocks:
+            x = block(x)
 
         x = self.block9(x)
 
