@@ -56,7 +56,7 @@ class SkipBlock(nn.Module):
         x_n                     y_n
 
     See Fig. 7 (b) upper in https://arxiv.org/abs/1912.04958
-    Upsampling are all linear, no transposed convolution.
+    Upsampling are all linear, not transposed convolution.
 
     Parameters
     ----------
@@ -165,11 +165,9 @@ class D1(nn.Module):
             self.blocks.append(ResBlock(prev_chan, next_chan))
 
         self.block9 = nn.Sequential(
-            nn.Conv3d(chan(0), chan(-1), 3),
+            nn.Conv3d(chan(0), chan(-1), 1),
             nn.LeakyReLU(0.2, True),
-            nn.Conv3d(chan(-1), chan(-2), 1),
-            nn.LeakyReLU(0.2, True),
-            nn.Conv3d(chan(-2), 1, 1),
+            nn.Conv3d(chan(-1), 1, 1),
         )
 
     def forward(self, x):
@@ -186,7 +184,7 @@ class D1(nn.Module):
 class ResBlock(nn.Module):
     """The residual block of the StyleGAN2 discriminator.
 
-    Downsampling are all linear, no strided convolution.
+    Downsampling are all linear, not strided convolution.
 
     Notes
     -----
