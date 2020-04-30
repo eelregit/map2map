@@ -48,7 +48,7 @@ class SkipBlock(nn.Module):
 
         x_p                     y_p
          |                       |
-    convolution          bilinear upsample
+    convolution           linear upsample
          |                       |
           >--- projection ------>+
          |                       |
@@ -56,7 +56,7 @@ class SkipBlock(nn.Module):
         x_n                     y_n
 
     See Fig. 7 (b) upper in https://arxiv.org/abs/1912.04958
-    Upsampling are all bilinear, no transposed convolution.
+    Upsampling are all linear, no transposed convolution.
 
     Parameters
     ----------
@@ -67,7 +67,7 @@ class SkipBlock(nn.Module):
 
     Notes
     -----
-    out_size = 2 * in_size - 6
+    next_size = 2 * prev_size - 6
     """
     def __init__(self, prev_chan, next_chan, out_chan, cat_noise):
         super().__init__()
@@ -181,6 +181,14 @@ class D1(nn.Module):
 
 
 class ResBlock(nn.Module):
+    """The residual block of the StyleGAN2 discriminator.
+
+    Downsampling are all linear, no strided convolution.
+
+    Notes
+    -----
+    next_size = (prev_size - 4) // 2
+    """
     def __init__(self, prev_chan, next_chan):
         super().__init__()
 
