@@ -117,7 +117,7 @@ def gpu_worker(local_rank, node, args):
     args.in_chan, args.out_chan = train_dataset.in_chan, train_dataset.tgt_chan
 
     model = getattr(models, args.model)
-    model = model(sum(args.in_chan), sum(args.out_chan))
+    model = model(sum(args.in_chan), sum(args.out_chan), args.scale_factor)
     model.to(device)
     model = DistributedDataParallel(model, device_ids=[device],
             process_group=dist.new_group())
@@ -141,8 +141,12 @@ def gpu_worker(local_rank, node, args):
     if args.adv:
         adv_model = getattr(models, args.adv_model)
         adv_model = adv_model_wrapper(adv_model)
-        adv_model = adv_model(sum(args.in_chan + args.out_chan)
-                if args.cgan else sum(args.out_chan), 1)
+        adv_model = adv_model(
+            sum(args.in_chan + args.out_chan) if args.cgan
+                else sum(args.out_chan),
+            1,
+            args.scale_factor
+        )
         if args.adv_model_spectral_norm:
             add_spectral_norm(adv_model)
         adv_model.to(device)

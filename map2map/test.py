@@ -34,7 +34,7 @@ def test(args):
     in_chan, out_chan = test_dataset.in_chan, test_dataset.tgt_chan
 
     model = getattr(models, args.model)
-    model = model(sum(in_chan), sum(out_chan))
+    model = model(sum(in_chan), sum(out_chan), args.scale_factor)
     criterion = getattr(torch.nn, args.criterion)
     criterion = criterion()
 
