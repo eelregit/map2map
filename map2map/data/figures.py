@@ -21,8 +21,8 @@ def fig3d(*fields, size=64, title=None, cmap=None, norm=None):
     if title is not None:
         assert len(title) == nf
 
-    im_size = 3
-    cbar_height = 0.5
+    im_size = 2
+    cbar_height = 0.3
     cbar_frac = cbar_height / (nc * im_size + cbar_height)
     fig, axes = plt.subplots(
         nc, nf,
