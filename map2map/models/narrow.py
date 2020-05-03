@@ -5,8 +5,6 @@ import torch.nn as nn
 def narrow_by(a, c):
     """Narrow a by size c symmetrically on all edges.
     """
-    assert isinstance(c, int)
-
     for d in range(2, a.dim()):
         a = a.narrow(d, c, a.shape[d] - 2 * c)
     return a

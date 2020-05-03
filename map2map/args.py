@@ -38,7 +38,7 @@ def add_common_args(parser):
             help='upsampling factor for super-resolution, in which case '
             'crop and pad are sizes of the input resolution')
 
-    parser.add_argument('--model', required=True, type=str,
+    parser.add_argument('--model', type=str, required=True,
             help='model from .models')
     parser.add_argument('--criterion', default='MSELoss', type=str,
             help='model criterion from torch.nn')
@@ -100,7 +100,7 @@ def add_train_args(parser):
 
     parser.add_argument('--optimizer', default='Adam', type=str,
             help='optimizer from torch.optim')
-    parser.add_argument('--lr', default=0.001, type=float,
+    parser.add_argument('--lr', type=float, required=True,
             help='initial learning rate')
 #    parser.add_argument('--momentum', default=0.9, type=float,
 #            help='momentum')
