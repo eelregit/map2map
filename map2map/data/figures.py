@@ -92,6 +92,7 @@ def fig3d(*fields, size=64, title=None, cmap=None, norm=None):
             orientation='horizontal',
             fraction=cbar_frac,
             pad=0,
+            shrink=0.9,
         )
 
 #    fig.set_constrained_layout_pads(w_pad=0, h_pad=0, wspace=0, hspace=0)
