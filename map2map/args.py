@@ -41,14 +41,21 @@ def add_common_args(parser):
             'of target normalization functions from .data.norms')
     parser.add_argument('--crop', type=int,
             help='size to crop the input and target data')
+    parser.add_argument('--crop-start', type=int,
+            help='starting point of the first crop. Default is the origin')
+    parser.add_argument('--crop-stop', type=int,
+            help='stopping point of the last crop. Default is the corner '
+            'opposite to the origin')
+    parser.add_argument('--crop-step', type=int,
+            help='spacing between crops. Default is the crop size')
     parser.add_argument('--pad', default=0, type=int,
             help='size to pad the input data beyond the crop size, assuming '
             'periodic boundary condition')
     parser.add_argument('--scale-factor', default=1, type=int,
-            help='input upsampling factor for super-resolution purpose, in '
-            'which case crop and pad will be taken at the original resolution')
+            help='upsampling factor for super-resolution, in which case '
+            'crop and pad are sizes of the input resolution')
 
-    parser.add_argument('--model', required=True, type=str,
+    parser.add_argument('--model', type=str, required=True,
             help='model from .models')
     parser.add_argument('--criterion', default='MSELoss', type=str,
             help='model criterion from torch.nn')
@@ -124,7 +131,7 @@ def add_train_args(parser):
 
     parser.add_argument('--optimizer', default='Adam', type=str,
             help='optimizer from torch.optim')
-    parser.add_argument('--lr', default=0.001, type=float,
+    parser.add_argument('--lr', type=float, required=True,
             help='initial learning rate')
 #    parser.add_argument('--momentum', default=0.9, type=float,
 #            help='momentum')
