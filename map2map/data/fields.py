@@ -35,7 +35,7 @@ class FieldDataset(Dataset):
     """
     def __init__(self, in_patterns, tgt_patterns,
                  in_norms=None, tgt_norms=None,
-                 augment=False, crop=None, pad=0, step=None, scale_factor=1,
+                 augment=False, crop=None, step=None, pad=0, scale_factor=1,
                  cache=False, div_data=False, rank=None, world_size=None):
         in_file_lists = [sorted(glob(p)) for p in in_patterns]
         self.in_files = list(zip(* in_file_lists))
@@ -81,15 +81,15 @@ class FieldDataset(Dataset):
         else:
             self.crop = np.broadcast_to(crop, (self.ndim,))
 
-        assert isinstance(pad, int), 'only support symmetric padding for now'
-        self.pad = np.broadcast_to(pad, (self.ndim, 2))
-
-        if step = None:
+        if step is None:
             self.step = self.crop
         else:
             self.step = np.broadcast_to(step, (self.ndim,))
         self.reps = self.size // self.step
         self.tot_reps = np.prod(self.reps)
+
+        assert isinstance(pad, int), 'only support symmetric padding for now'
+        self.pad = np.broadcast_to(pad, (self.ndim, 2))
 
         assert isinstance(scale_factor, int) and scale_factor >= 1, \
                 "only support integer upsampling"

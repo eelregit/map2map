@@ -20,6 +20,7 @@ def test(args):
         tgt_norms=args.tgt_norms,
         augment=False,
         crop=args.crop,
+        step=args.step,
         pad=args.pad,
         scale_factor=args.scale_factor,
         cache=args.cache,

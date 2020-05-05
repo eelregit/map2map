@@ -31,6 +31,8 @@ def add_common_args(parser):
             'of target normalization functions from .data.norms')
     parser.add_argument('--crop', type=int,
             help='size to crop the input and target data')
+    parser.add_argument('--step', type=int,
+            help='spacing between crops. Default is the crop size')
     parser.add_argument('--pad', default=0, type=int,
             help='size to pad the input data beyond the crop size, assuming '
             'periodic boundary condition')
