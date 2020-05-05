@@ -12,6 +12,7 @@ class FieldDataset(Dataset):
 
     `in_patterns` is a list of glob patterns for the input fields.
     For example, `in_patterns=['/train/field1_*.npy', '/train/field2_*.npy']`.
+    Each pattern in the list is a new field.
     Likewise `tgt_patterns` is for target fields.
     Input and target samples are matched by sorting the globbed files.
 
@@ -20,8 +21,10 @@ class FieldDataset(Dataset):
 
     Data augmentations are supported for scalar and vector fields.
 
-    Input and target fields can be cropped.
-    Input fields can be padded assuming periodic boundary condition.
+    Input and target fields can be cropped to return slices of size `crop`.
+    This is repeated every `step` (same as `crop` by default) elements.
+    Input (but not target) fields can be padded beyond the crop size assuming
+    periodic boundary condition.
 
     Setting integer `scale_factor` greater than 1 will crop target bigger than
     the input for super-resolution, in which case `crop` and `pad` are sizes of
@@ -32,7 +35,7 @@ class FieldDataset(Dataset):
     """
     def __init__(self, in_patterns, tgt_patterns,
                  in_norms=None, tgt_norms=None,
-                 augment=False, crop=None, pad=0, scale_factor=1,
+                 augment=False, crop=None, pad=0, step=None, scale_factor=1,
                  cache=False, div_data=False, rank=None, world_size=None):
         in_file_lists = [sorted(glob(p)) for p in in_patterns]
         self.in_files = list(zip(* in_file_lists))
@@ -75,14 +78,18 @@ class FieldDataset(Dataset):
 
         if crop is None:
             self.crop = self.size
-            self.reps = np.ones_like(self.size)
         else:
-            self.crop = np.broadcast_to(crop, self.size.shape)
-            self.reps = self.size // self.crop
-        self.tot_reps = int(np.prod(self.reps))
+            self.crop = np.broadcast_to(crop, (self.ndim,))
 
         assert isinstance(pad, int), 'only support symmetric padding for now'
         self.pad = np.broadcast_to(pad, (self.ndim, 2))
+
+        if step = None:
+            self.step = self.crop
+        else:
+            self.step = np.broadcast_to(step, (self.ndim,))
+        self.reps = self.size // self.step
+        self.tot_reps = np.prod(self.reps)
 
         assert isinstance(scale_factor, int) and scale_factor >= 1, \
                 "only support integer upsampling"
@@ -98,7 +105,7 @@ class FieldDataset(Dataset):
 
     def __getitem__(self, idx):
         idx, sub_idx = idx // self.tot_reps, idx % self.tot_reps
-        start = np.unravel_index(sub_idx, self.reps) * self.crop
+        start = np.unravel_index(sub_idx, self.reps) * self.step
 
         if self.cache:
             try:
