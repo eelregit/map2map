@@ -63,6 +63,8 @@ def gpu_worker(local_rank, node, args):
         in_norms=args.in_norms,
         tgt_norms=args.tgt_norms,
         augment=args.augment,
+        aug_add=args.aug_add,
+        aug_mul=args.aug_mul,
         crop=args.crop,
         step=args.step,
         pad=args.pad,
@@ -93,6 +95,8 @@ def gpu_worker(local_rank, node, args):
             in_norms=args.in_norms,
             tgt_norms=args.tgt_norms,
             augment=False,
+            aug_add=None,
+            aug_mul=None,
             crop=args.crop,
             step=args.step,
             pad=args.pad,
@@ -355,11 +359,10 @@ def train(epoch, loader, model, criterion, optimizer, scheduler,
             loss_adv, = adv_criterion(eval_out, real)
             epoch_loss[1] += loss_adv.item()
 
-            r = loss.item() / (loss_adv.item() + 1e-8)
-            f = args.loss_fraction
-            e = epoch - args.adv_start
-            d = 0.5 ** (e / args.loss_halflife)
-            loss = (f + (1 - f) * d) * loss + (1 - f) * (1 - d) * r * loss_adv
+            ratio = loss.item() / (loss_adv.item() + 1e-8)
+            frac = args.loss_fraction
+            if epoch >= args.adv_start:
+                loss = frac * loss + (1 - frac) * ratio * loss_adv
 
         optimizer.zero_grad()
         loss.backward()

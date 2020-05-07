@@ -74,7 +74,13 @@ def add_train_args(parser):
     parser.add_argument('--val-tgt-patterns', type=str_list,
             help='comma-sep. list of glob patterns for validation target data')
     parser.add_argument('--augment', action='store_true',
-            help='enable training data augmentation')
+            help='enable data augmentation of axis flipping and permutation')
+    parser.add_argument('--aug-add', type=float,
+            help='additive data augmentation, (normal) std, '
+            'same factor for all fields')
+    parser.add_argument('--aug-mul', type=float,
+            help='multiplicative data augmentation, (log-normal) std, '
+            'same factor for all fields')
 
     parser.add_argument('--adv-model', type=str,
             help='enable adversary model from .models')
@@ -93,8 +99,6 @@ def add_train_args(parser):
             'e.g. 0.9 for label smoothing and 1 to disable')
     parser.add_argument('--loss-fraction', default=0.5, type=float,
             help='final fraction of loss (vs adv-loss)')
-    parser.add_argument('--loss-halflife', default=20, type=float,
-            help='half-life (epoch) to anneal loss while enhancing adv-loss')
     parser.add_argument('--instance-noise', default=0, type=float,
             help='noise added to the adversary inputs to stabilize training')
     parser.add_argument('--instance-noise-batches', default=1e4, type=float,
