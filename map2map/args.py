@@ -1,4 +1,5 @@
 import argparse
+import warnings
 
 from .train import ckpt_link
 
@@ -91,7 +92,7 @@ def add_train_args(parser):
             'e.g. 0.9 for label smoothing and 1 to disable')
     parser.add_argument('--loss-fraction', default=0.5, type=float,
             help='final fraction of loss (vs adv-loss)')
-    parser.add_argument('--loss-halflife', default=20, type=float,
+    parser.add_argument('--loss-halflife', default=20, type=deprecated,
             help='half-life (epoch) to anneal loss while enhancing adv-loss')
     parser.add_argument('--instance-noise', default=0, type=float,
             help='noise added to the adversary inputs to stabilize training')
@@ -139,6 +140,10 @@ def add_test_args(parser):
 
 def str_list(s):
     return s.split(',')
+
+
+def deprecated(s):
+    warnings.warn("deprecated argument", DeprecationWarning, stacklevel=2)
 
 
 #def int_tuple(t):
