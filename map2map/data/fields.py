@@ -92,7 +92,7 @@ class FieldDataset(Dataset):
         self.pad = np.broadcast_to(pad, (self.ndim, 2))
 
         assert isinstance(scale_factor, int) and scale_factor >= 1, \
-                "only support integer upsampling"
+                'only support integer upsampling'
         self.scale_factor = scale_factor
 
         self.cache = cache

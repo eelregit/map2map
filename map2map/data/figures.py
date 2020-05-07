@@ -28,6 +28,7 @@ def fig3d(*fields, size=64, title=None, cmap=None, norm=None):
         nc, nf,
         squeeze=False,
         figsize=(nf * im_size, nc * im_size + cbar_height),
+        dpi=100,
         constrained_layout=True,
     )
 
@@ -93,8 +94,9 @@ def fig3d(*fields, size=64, title=None, cmap=None, norm=None):
             fraction=cbar_frac,
             pad=0,
             shrink=0.9,
+            aspect=10,
         )
 
-    fig.set_constrained_layout_pads(w_pad=3/72, h_pad=3/72, wspace=0, hspace=0)
+    fig.set_constrained_layout_pads(w_pad=2/72, h_pad=2/72, wspace=0, hspace=0)
 
     return fig
