@@ -19,6 +19,8 @@ def test(args):
         in_norms=args.in_norms,
         tgt_norms=args.tgt_norms,
         augment=False,
+        aug_add=None,
+        aug_mul=None,
         crop=args.crop,
         pad=args.pad,
         scale_factor=args.scale_factor,

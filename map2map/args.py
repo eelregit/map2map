@@ -73,7 +73,13 @@ def add_train_args(parser):
     parser.add_argument('--val-tgt-patterns', type=str_list,
             help='comma-sep. list of glob patterns for validation target data')
     parser.add_argument('--augment', action='store_true',
-            help='enable training data augmentation')
+            help='enable data augmentation of axis flipping and permutation')
+    parser.add_argument('--aug-add', type=float,
+            help='additive data augmentation, (normal) std, '
+            'same factor for all fields')
+    parser.add_argument('--aug-mul', type=float,
+            help='multiplicative data augmentation, (log-normal) std, '
+            'same factor for all fields')
 
     parser.add_argument('--adv-model', type=str,
             help='enable adversary model from .models')
