@@ -58,6 +58,8 @@ class FieldDataset(Dataset):
             self.in_files = self.in_files[rank * files : (rank + 1) * files]
             self.tgt_files = self.tgt_files[rank * files : (rank + 1) * files]
 
+        assert len(self.in_files) > 0, 'files not divisible among ranks'
+
         self.in_chan = [np.load(f).shape[0] for f in self.in_files[0]]
         self.tgt_chan = [np.load(f).shape[0] for f in self.tgt_files[0]]
 
