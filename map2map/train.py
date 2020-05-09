@@ -15,6 +15,7 @@ from torch.utils.tensorboard import SummaryWriter
 
 from .data import FieldDataset
 from .data.figures import fig3d
+from .data.plotps import *
 from . import models
 from .models import (narrow_cast,
         adv_model_wrapper, adv_criterion_wrapper,
@@ -431,6 +432,10 @@ def train(epoch, loader, model, criterion, optimizer, scheduler,
                 output[-1, skip_chan:] - target[-1, skip_chan:],
                 title=['in', 'out', 'tgt', 'out - tgt'],
             ), global_step=epoch+1)
+        
+        if epoch%args.ps_interval == 0:
+            logger.add_figure('fig/epoch/val_ps',lr2sr_Ps(args.lr_disp_path,args.tgt_ps_path,args.lr_ps_path,\
+                                                     model,args.scale_factor,args.pad,args.Lbox),global_step=epoch+1)
 
     return epoch_loss
 
@@ -498,7 +503,7 @@ def validate(epoch, loader, model, criterion, adv_model, adv_criterion,
         skip_chan = 0
         if args.adv and epoch >= args.adv_start and args.cgan:
             skip_chan = sum(args.in_chan)
-        logger.add_figure('fig/epoch/val', fig3d(
+        logger.add_figure('fig/epoch/ps', fig3d(
                 input[-1],
                 output[-1, skip_chan:],
                 target[-1, skip_chan:],

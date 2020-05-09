@@ -73,6 +73,18 @@ def add_train_args(parser):
             help='comma-sep. list of glob patterns for validation input data')
     parser.add_argument('--val-tgt-patterns', type=str_list,
             help='comma-sep. list of glob patterns for validation target data')
+    
+    parser.add_argument('--lr-disp-path', type=str,
+            help='path of low-res displacement field for PS validation')    
+    parser.add_argument('--tgt-ps-path', type=str,
+            help='path of the high-resl power spectrum')    
+    parser.add_argument('--lr-ps-path', type=str,
+            help='path of the low-resl power spectrum')  
+    parser.add_argument('--Lbox', type=float,
+            help='Boxsize of the simulation')
+    parser.add_argument('--ps-interval', type=int,
+            help='interval between the epochs to calculate power spectrum')
+    
     parser.add_argument('--augment', action='store_true',
             help='enable data augmentation of axis flipping and permutation')
     parser.add_argument('--aug-add', type=float,
