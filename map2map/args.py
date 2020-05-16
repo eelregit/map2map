@@ -66,7 +66,11 @@ def add_common_args(parser):
             'Default is the batch size or 0 for batch size 1')
 
     parser.add_argument('--cache', action='store_true',
-            help='enable caching in field datasets')
+            help='enable LRU cache of input and target fields to reduce I/O')
+    parser.add_argument('--cache-maxsize', type=int,
+            help='maximum pairs of fields in cache, unlimited by default. '
+            'This only applies to training if not None, '
+            'in which case the testing cache maxsize is 1')
 
 
 def add_train_args(parser):
