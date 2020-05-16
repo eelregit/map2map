@@ -8,7 +8,7 @@ setup(
     author='Yin Li et al.',
     author_email='eelregit@gmail.com',
     packages=find_packages(),
-    python_requires='>=3',
+    python_requires='>=3.2',
     install_requires=[
         'torch',
         'numpy',

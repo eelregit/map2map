@@ -45,8 +45,6 @@ def node_worker(args):
 
 
 def gpu_worker(local_rank, node, args):
-    set_runtime_default_args(args)
-
     device = torch.device('cuda', local_rank)
     torch.cuda.device(device)
 
@@ -173,16 +171,16 @@ def gpu_worker(local_rank, node, args):
         def init_weights(m):
             if isinstance(m, (nn.Linear, nn.Conv1d, nn.Conv2d, nn.Conv3d,
                 nn.ConvTranspose1d, nn.ConvTranspose2d, nn.ConvTranspose3d)):
-                m.weight.data.normal_(0.0, args.init_weight_scale)
+                m.weight.data.normal_(0.0, args.init_weight_std)
             elif isinstance(m, (nn.BatchNorm1d, nn.BatchNorm2d, nn.BatchNorm3d,
                 nn.SyncBatchNorm, nn.LayerNorm, nn.GroupNorm,
                 nn.InstanceNorm1d, nn.InstanceNorm2d, nn.InstanceNorm3d)):
                 if m.affine:
                     # NOTE: dispersion from DCGAN, why?
-                    m.weight.data.normal_(1.0, args.init_weight_scale)
+                    m.weight.data.normal_(1.0, args.init_weight_std)
                     m.bias.data.fill_(0)
 
-        if args.init_weight_scale is not None:
+        if args.init_weight_std is not None:
             model.apply(init_weights)
 
             if args.adv:
@@ -501,22 +499,6 @@ def validate(epoch, loader, model, criterion, adv_model, adv_criterion,
             ), global_step=epoch+1)
 
     return epoch_loss
-
-
-def set_runtime_default_args(args):
-    args.val = args.val_in_patterns is not None and \
-            args.val_tgt_patterns is not None
-
-    args.adv = args.adv_model is not None
-
-    if args.adv:
-        if args.adv_lr is None:
-            args.adv_lr = args.lr
-        if args.adv_weight_decay is None:
-            args.adv_weight_decay = args.weight_decay
-
-        if args.init_weight_scale is None:
-            args.init_weight_scale = 0.02
 
 
 def dist_init(rank, args):

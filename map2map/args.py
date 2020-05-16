@@ -4,8 +4,11 @@ from .train import ckpt_link
 
 
 def get_args():
+    """Parse arguments and set runtime defaults.
+    """
     parser = argparse.ArgumentParser(
         description='Transform field(s) to field(s)')
+
     subparsers = parser.add_subparsers(title='modes', dest='mode', required=True)
     train_parser = subparsers.add_parser(
         'train',
@@ -20,6 +23,11 @@ def get_args():
     add_test_args(test_parser)
 
     args = parser.parse_args()
+
+    if args.mode == 'train':
+        set_train_args(args)
+    elif args.mode == 'test':
+        set_test_args(args)
 
     return args
 
@@ -52,9 +60,10 @@ def add_common_args(parser):
 
     parser.add_argument('--batches', default=1, type=int,
             help='mini-batch size, per GPU in training or in total in testing')
-    parser.add_argument('--loader-workers', default=0, type=int,
+    parser.add_argument('--loader-workers', type=int,
             help='number of data loading workers, per GPU in training or '
-            'in total in testing')
+            'in total in testing. '
+            'Default is the batch size or 0 for batch size 1')
 
     parser.add_argument('--cache', action='store_true',
             help='enable caching in field datasets')
@@ -116,9 +125,8 @@ def add_train_args(parser):
             help='adversary weight decay')
     parser.add_argument('--reduce-lr-on-plateau', action='store_true',
             help='Enable ReduceLROnPlateau learning rate scheduler')
-    parser.add_argument('--init-weight-scale', type=float,
-            help='weight initialization scale, default is 0.02 with adversary '
-            'and the pytorch default without it')
+    parser.add_argument('--init-weight-std', type=float,
+            help='weight initialization std')
     parser.add_argument('--epochs', default=128, type=int,
             help='total number of epochs to run')
     parser.add_argument('--seed', default=42, type=int,
@@ -153,3 +161,29 @@ def str_list(s):
 #    elif len(t) != 6:
 #        raise ValueError('size must be int or 6-tuple')
 #    return t
+
+
+def set_common_args(args):
+    if args.loader_workers is None:
+        args.loader_workers = 0
+        if args.batches > 1:
+            args.loader_workers = args.batches
+
+
+def set_train_args(args):
+    set_common_args(args)
+
+    args.val = args.val_in_patterns is not None and \
+            args.val_tgt_patterns is not None
+
+    args.adv = args.adv_model is not None
+
+    if args.adv:
+        if args.adv_lr is None:
+            args.adv_lr = args.lr
+        if args.adv_weight_decay is None:
+            args.adv_weight_decay = args.weight_decay
+
+
+def set_test_args(args):
+    set_common_args(args)
