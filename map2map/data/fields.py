@@ -11,7 +11,7 @@ from .norms import import_norm
 class FieldDataset(Dataset):
     """Dataset of lists of fields.
 
-    `in_patterns` is a list of glob patterns for the input fields.
+    `in_patterns` is a list of glob patterns for the input field files.
     For example, `in_patterns=['/train/field1_*.npy', '/train/field2_*.npy']`.
     Likewise `tgt_patterns` is for target fields.
     Input and target fields are matched by sorting the globbed files.
@@ -51,15 +51,9 @@ class FieldDataset(Dataset):
 
         assert len(self.in_files) == len(self.tgt_files), \
                 'number of input and target fields do not match'
+        self.nfile = len(self.in_files)
 
-        assert len(self.in_files) > 0, 'file not found'
-
-        if div_data:
-            files = len(self.in_files) // world_size
-            self.in_files = self.in_files[rank * files : (rank + 1) * files]
-            self.tgt_files = self.tgt_files[rank * files : (rank + 1) * files]
-
-        assert len(self.in_files) > 0, 'files not divisible among ranks'
+        assert self.nfile > 0, 'file not found'
 
         self.in_chan = [np.load(f).shape[0] for f in self.in_files[0]]
         self.tgt_chan = [np.load(f).shape[0] for f in self.tgt_files[0]]
@@ -92,7 +86,7 @@ class FieldDataset(Dataset):
         else:
             self.crop = np.broadcast_to(crop, self.size.shape)
             self.reps = self.size // self.crop
-        self.tot_reps = int(np.prod(self.reps))
+        self.ncrop = int(np.prod(self.reps))
 
         assert isinstance(pad, int), 'only support symmetric padding for now'
         self.pad = np.broadcast_to(pad, (self.ndim, 2))
@@ -104,19 +98,44 @@ class FieldDataset(Dataset):
         if cache:
             self.get_fields = lru_cache(maxsize=cache_maxsize)(self.get_fields)
 
+        if div_data:
+            self.samples = []
+
+            # first add full fields when num_fields > num_GPU
+            for i in range(rank, self.nfile // world_size * world_size,
+                           world_size):
+                self.samples.append(
+                    range(i * self.ncrop, (i + 1) * self.ncrop)
+                )
+
+            # then split the rest into fractions of fields
+            # drop the last incomplete batch of samples
+            frac_start = self.nfile // world_size * world_size * self.ncrop
+            frac_samples = self.nfile % world_size * self.ncrop // world_size
+            self.samples.append(range(frac_start + rank * frac_samples,
+                                      frac_start + (rank + 1) * frac_samples))
+
+            self.samples = np.concatenate(self.samples)
+        else:
+            self.samples = np.arange(self.nfile * self.ncrop)
+        self.nsample = len(self.samples)
+
+        self.rank = rank
+
     def get_fields(self, idx):
         in_fields = [np.load(f) for f in self.in_files[idx]]
         tgt_fields = [np.load(f) for f in self.tgt_files[idx]]
         return in_fields, tgt_fields
 
     def __len__(self):
-        return len(self.in_files) * self.tot_reps
+        return self.nsample
 
     def __getitem__(self, idx):
-        idx, sub_idx = idx // self.tot_reps, idx % self.tot_reps
-        start = np.unravel_index(sub_idx, self.reps) * self.crop
+        idx = self.samples[idx]
 
-        in_fields, tgt_fields = self.get_fields(idx)
+        in_fields, tgt_fields = self.get_fields(idx // self.ncrop)
+
+        start = np.unravel_index(idx % self.ncrop, self.reps) * self.crop
 
         in_fields = crop(in_fields, start, self.crop, self.pad)
         tgt_fields = crop(tgt_fields, start * self.scale_factor,

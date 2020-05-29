@@ -1,4 +1,5 @@
 import argparse
+import warnings
 
 from .train import ckpt_link
 
@@ -53,7 +54,7 @@ def add_common_args(parser):
     parser.add_argument('--load-state', default=ckpt_link, type=str,
             help='path to load the states of model, optimizer, rng, etc. '
             'Default is the checkpoint. '
-            'Start from scratch if the checkpoint does not exist')
+            'Start from scratch if set empty or the checkpoint is missing')
     parser.add_argument('--load-state-non-strict', action='store_false',
             help='allow incompatible keys when loading model states',
             dest='load_state_strict')
@@ -172,6 +173,17 @@ def set_common_args(args):
         args.loader_workers = 0
         if args.batches > 1:
             args.loader_workers = args.batches
+
+    if not args.cache and args.cache_maxsize is not None:
+        args.cache_maxsize = None
+        warnings.warn('Resetting cache maxsize given cache is disabled',
+                      RuntimeWarning)
+    if (args.cache and args.cache_maxsize is not None
+            and args.cache_maxsize < 1):
+        args.cache = False
+        args.cache_maxsize = None
+        warnings.warn('Disabling cache given cache maxsize < 1',
+                      RuntimeWarning)
 
 
 def set_train_args(args):

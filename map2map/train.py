@@ -13,7 +13,7 @@ from torch.utils.data.distributed import DistributedSampler
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 
-from .data import FieldDataset
+from .data import FieldDataset, GroupedRandomSampler
 from .data.figures import fig3d
 from . import models
 from .models import (narrow_like,
@@ -48,10 +48,12 @@ def gpu_worker(local_rank, node, args):
     device = torch.device('cuda', local_rank)
     torch.cuda.device(device)
 
-    torch.manual_seed(args.seed)
-    #torch.backends.cudnn.deterministic = True  # NOTE: test perf
-
     rank = args.gpus_per_node * node + local_rank
+
+    # Need randomness across processes, for sampler, augmentation, noise etc.
+    # Note DDP broadcasts initial model states from rank 0
+    torch.manual_seed(args.seed + rank)
+    #torch.backends.cudnn.deterministic = True  # NOTE: test perf
 
     dist_init(rank, args)
 
@@ -72,7 +74,13 @@ def gpu_worker(local_rank, node, args):
         rank=rank,
         world_size=args.world_size,
     )
-    if not args.div_data:
+    if args.div_data:
+        train_sampler = GroupedRandomSampler(
+            train_dataset,
+            group_size=None if args.cache_maxsize is None else
+                       args.cache_maxsize * train_dataset.ncrop,
+        )
+    else:
         try:
             train_sampler = DistributedSampler(train_dataset, shuffle=True)
         except TypeError:
@@ -80,8 +88,8 @@ def gpu_worker(local_rank, node, args):
     train_loader = DataLoader(
         train_dataset,
         batch_size=args.batches,
-        shuffle=args.div_data,
-        sampler=None if args.div_data else train_sampler,
+        shuffle=False,
+        sampler=train_sampler,
         num_workers=args.loader_workers,
         pin_memory=True,
     )
@@ -104,7 +112,9 @@ def gpu_worker(local_rank, node, args):
             rank=rank,
             world_size=args.world_size,
         )
-        if not args.div_data:
+        if args.div_data:
+            val_sampler = None
+        else:
             try:
                 val_sampler = DistributedSampler(val_dataset, shuffle=False)
             except TypeError:
@@ -113,7 +123,7 @@ def gpu_worker(local_rank, node, args):
             val_dataset,
             batch_size=args.batches,
             shuffle=False,
-            sampler=None if args.div_data else val_sampler,
+            sampler=val_sampler,
             num_workers=args.loader_workers,
             pin_memory=True,
         )
@@ -277,6 +287,12 @@ def gpu_worker(local_rank, node, args):
             tmp_link = '{}.pth'.format(time.time())
             os.symlink(state_file, tmp_link)  # workaround to overwrite
             os.rename(tmp_link, ckpt_link)
+
+    if args.cache:
+        print('rank {} train data: {}'.format(
+            rank, train_dataset.get_fields.cache_info()))
+        print('rank {} val   data: {}'.format(
+            rank, val_dataset.get_fields.cache_info()))
 
     dist.destroy_process_group()
 
