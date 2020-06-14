@@ -7,10 +7,10 @@ Neural network emulators to transform field/map data
     * [Data](#data)
         * [Data normalization](#data-normalization)
     * [Model](#model)
-    * [Customization](#customization)
     * [Training](#training)
         * [Files generated](#files-generated)
         * [Tracking](#tracking)
+    * [Customization](#customization)
 
 
 ## Installation
@@ -67,20 +67,6 @@ follow [Customization](#customization).
 ### Training
 
 
-### Customization
-
-Models, criteria, optimizers and data normalizations can be customized
-without modifying map2map.
-They can be implemented as callbacks in a user directory which is then
-passed by `--callback-at`.
-The default locations are searched first before the callback directory.
-So be aware of name collisions.
-
-This approach is good for experimentation.
-For example, one can play with a model `Bar` in `./foo.py`, by calling
-`m2m.py` with `--model foo.Bar --callback-at .`
-
-
 #### Files generated
 
 * `*.out`: job stdout and stderr
@@ -101,3 +87,17 @@ tensorboard --logdir PATH --samples_per_plugin images=IMAGES --port PORT
   directory for tensorboard to search recursively for multiple jobs.
 * Show `IMAGES` images, or all of them by setting it to 0.
 * Pick a free `PORT`. For remote jobs, do ssh port forwarding.
+
+
+### Customization
+
+Models, criteria, optimizers and data normalizations can be customized
+without modifying map2map.
+They can be implemented as callbacks in a user directory which is then
+passed by `--callback-at`.
+The default locations are searched first before the callback directory.
+So be aware of name collisions.
+
+This approach is good for experimentation.
+For example, one can play with a model `Bar` in `path/to/foo.py`, by
+calling `m2m.py` with `--model foo.Bar --callback-at path/to`.
