@@ -5,7 +5,8 @@ import torch
 import torch.nn.functional as F
 from torch.utils.data import Dataset
 
-from .norms import import_norm
+from ..utils import import_attr
+from . import norms
 
 
 class FieldDataset(Dataset):
@@ -38,7 +39,7 @@ class FieldDataset(Dataset):
     This saves CPU RAM but limits stochasticity.
     """
     def __init__(self, in_patterns, tgt_patterns,
-                 in_norms=None, tgt_norms=None,
+                 in_norms=None, tgt_norms=None, callback_at=None,
                  augment=False, aug_add=None, aug_mul=None,
                  crop=None, pad=0, scale_factor=1,
                  cache=False, cache_maxsize=None, div_data=False,
@@ -65,13 +66,15 @@ class FieldDataset(Dataset):
         if in_norms is not None:
             assert len(in_patterns) == len(in_norms), \
                     'numbers of input normalization functions and fields do not match'
-            in_norms = [import_norm(norm) for norm in in_norms]
+            in_norms = [import_attr(norm, norms.__name__, callback_at)
+                        for norm in in_norms]
         self.in_norms = in_norms
 
         if tgt_norms is not None:
             assert len(tgt_patterns) == len(tgt_norms), \
                     'numbers of target normalization functions and fields do not match'
-            tgt_norms = [import_norm(norm) for norm in tgt_norms]
+            tgt_norms = [import_attr(norm, norms.__name__, callback_at)
+                         for norm in tgt_norms]
         self.tgt_norms = tgt_norms
 
         self.augment = augment

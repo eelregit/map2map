@@ -6,6 +6,7 @@ from pprint import pprint
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import torch.optim as optim
 import torch.distributed as dist
 from torch.multiprocessing import spawn
 from torch.nn.parallel import DistributedDataParallel
@@ -20,7 +21,7 @@ from .models import (narrow_like,
         adv_model_wrapper, adv_criterion_wrapper,
         add_spectral_norm, rm_spectral_norm,
         InstanceNoise)
-from .state import load_model_state_dict
+from .utils import import_attr, load_model_state_dict
 
 
 ckpt_link = 'checkpoint.pth'
@@ -62,6 +63,7 @@ def gpu_worker(local_rank, node, args):
         tgt_patterns=args.train_tgt_patterns,
         in_norms=args.in_norms,
         tgt_norms=args.tgt_norms,
+        callback_at=args.callback_at,
         augment=args.augment,
         aug_add=args.aug_add,
         aug_mul=args.aug_mul,
@@ -100,6 +102,7 @@ def gpu_worker(local_rank, node, args):
             tgt_patterns=args.val_tgt_patterns,
             in_norms=args.in_norms,
             tgt_norms=args.tgt_norms,
+            callback_at=args.callback_at,
             augment=False,
             aug_add=None,
             aug_mul=None,
@@ -130,17 +133,17 @@ def gpu_worker(local_rank, node, args):
 
     args.in_chan, args.out_chan = train_dataset.in_chan, train_dataset.tgt_chan
 
-    model = getattr(models, args.model)
+    model = import_attr(args.model, models.__name__, args.callback_at)
     model = model(sum(args.in_chan), sum(args.out_chan))
     model.to(device)
     model = DistributedDataParallel(model, device_ids=[device],
             process_group=dist.new_group())
 
-    criterion = getattr(nn, args.criterion)
+    criterion = import_attr(args.criterion, nn.__name__, args.callback_at)
     criterion = criterion()
     criterion.to(device)
 
-    optimizer = getattr(torch.optim, args.optimizer)
+    optimizer = import_attr(args.optimizer, optim.__name__, args.callback_at)
     optimizer = optimizer(
         model.parameters(),
         lr=args.lr,
@@ -148,12 +151,12 @@ def gpu_worker(local_rank, node, args):
         betas=(0.5, 0.999),
         weight_decay=args.weight_decay,
     )
-    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer,
+    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer,
             factor=0.1, patience=10, verbose=True)
 
     adv_model = adv_criterion = adv_optimizer = adv_scheduler = None
     if args.adv:
-        adv_model = getattr(models, args.adv_model)
+        adv_model = import_attr(args.adv_model, models.__name__, args.callback_at)
         adv_model = adv_model_wrapper(adv_model)
         adv_model = adv_model(sum(args.in_chan + args.out_chan)
                 if args.cgan else sum(args.out_chan), 1)
@@ -163,19 +166,19 @@ def gpu_worker(local_rank, node, args):
         adv_model = DistributedDataParallel(adv_model, device_ids=[device],
                 process_group=dist.new_group())
 
-        adv_criterion = getattr(nn, args.adv_criterion)
+        adv_criterion = import_attr(args.adv_criterion, nn.__name__, args.callback_at)
         adv_criterion = adv_criterion_wrapper(adv_criterion)
         adv_criterion = adv_criterion(reduction='min' if args.min_reduction else 'mean')
         adv_criterion.to(device)
 
-        adv_optimizer = getattr(torch.optim, args.optimizer)
+        adv_optimizer = import_attr(args.optimizer, optim.__name__, args.callback_at)
         adv_optimizer = adv_optimizer(
             adv_model.parameters(),
             lr=args.adv_lr,
             betas=(0.5, 0.999),
             weight_decay=args.adv_weight_decay,
         )
-        adv_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(adv_optimizer,
+        adv_scheduler = optim.lr_scheduler.ReduceLROnPlateau(adv_optimizer,
             factor=0.1, patience=10, verbose=True)
 
     if (args.load_state == ckpt_link and not os.path.isfile(ckpt_link)

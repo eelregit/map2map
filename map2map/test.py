@@ -6,7 +6,7 @@ from torch.utils.data import DataLoader
 from .data import FieldDataset
 from . import models
 from .models import narrow_like
-from .state import load_model_state_dict
+from .utils import import_attr, load_model_state_dict
 
 
 def test(args):
@@ -18,6 +18,7 @@ def test(args):
         tgt_patterns=args.test_tgt_patterns,
         in_norms=args.in_norms,
         tgt_norms=args.tgt_norms,
+        callback_at=args.callback_at,
         augment=False,
         aug_add=None,
         aug_mul=None,
@@ -35,9 +36,9 @@ def test(args):
 
     in_chan, out_chan = test_dataset.in_chan, test_dataset.tgt_chan
 
-    model = getattr(models, args.model)
+    model = import_attr(args.model, models.__name__, args.callback_at)
     model = model(sum(in_chan), sum(out_chan))
-    criterion = getattr(torch.nn, args.criterion)
+    criterion = import_attr(args.criterion, torch.nn.__name__, args.callback_at)
     criterion = criterion()
 
     device = torch.device('cpu')

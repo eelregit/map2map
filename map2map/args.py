@@ -1,3 +1,4 @@
+import os
 import argparse
 import warnings
 
@@ -72,6 +73,11 @@ def add_common_args(parser):
             help='maximum pairs of fields in cache, unlimited by default. '
             'This only applies to training if not None, '
             'in which case the testing cache maxsize is 1')
+    parser.add_argument('--callback-at', type=lambda s: os.path.abspath(s),
+            help='directory of custorm code defining callbacks for models, '
+            'norms, criteria, and optimizers. Disabled if not set. '
+            'This is appended to the default locations, '
+            'thus has the lowest priority.')
 
 
 def add_train_args(parser):

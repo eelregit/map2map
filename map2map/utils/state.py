@@ -1,5 +1,5 @@
-import warnings
 import sys
+import warnings
 from pprint import pformat
 
 
