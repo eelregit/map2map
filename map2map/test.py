@@ -42,7 +42,11 @@ def test(args):
     criterion = import_attr(args.criterion, torch.nn.__name__, args.callback_at)
     criterion = criterion()
 
-    device = torch.device('cpu')
+    if torch.cuda.is_available()==True:
+        device = torch.device('cuda')
+    else:
+        device = torch.device('cpu')
+
     state = torch.load(args.load_state, map_location=device)
     load_model_state_dict(model, state['model'], strict=args.load_state_strict)
     print('model state at epoch {} loaded from {}'.format(
