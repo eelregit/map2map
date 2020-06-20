@@ -70,8 +70,9 @@ follow [Customization](#customization).
 #### Files generated
 
 * `*.out`: job stdout and stderr
-* `state_*.pth`: training state including the model parameters
-* `checkpoint.pth`: symlink to the latest state
+* `state_{i}.pt`: training state after the i-th epoch including the
+  model state
+* `checkpoint.pt`: symlink to the latest state
 * `runs/`: directories of tensorboard logs
 
 

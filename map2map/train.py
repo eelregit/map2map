@@ -24,7 +24,7 @@ from .models import (narrow_like,
 from .utils import import_attr, load_model_state_dict
 
 
-ckpt_link = 'checkpoint.pth'
+ckpt_link = 'checkpoint.pt'
 
 
 def node_worker(args):
@@ -283,11 +283,11 @@ def gpu_worker(local_rank, node, args):
             if args.adv:
                 state['adv_model'] = adv_model.module.state_dict()
 
-            state_file = 'state_{}.pth'.format(epoch + 1)
+            state_file = 'state_{}.pt'.format(epoch + 1)
             torch.save(state, state_file)
             del state
 
-            tmp_link = '{}.pth'.format(time.time())
+            tmp_link = '{}.pt'.format(time.time())
             os.symlink(state_file, tmp_link)  # workaround to overwrite
             os.rename(tmp_link, ckpt_link)
 
