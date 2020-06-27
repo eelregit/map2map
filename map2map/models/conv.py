@@ -123,7 +123,8 @@ def narrow_like(a, b):
     consistent with the downsampling.
     """
     for d in range(2, a.dim()):
-        width = a.shape[d] - b.shape[d]
-        half_width = width // 2
-        a = a.narrow(d, half_width, a.shape[d] - width)
+        width = int(a.shape[d]) - int(b.shape[d])
+        half_width = int(width // 2)
+        a = a.narrow(d, half_width, int(a.shape[d]) - width)
     return a
+

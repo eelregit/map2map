@@ -158,8 +158,20 @@ def add_test_args(parser):
             help='comma-sep. list of glob patterns for test input data')
     parser.add_argument('--test-tgt-patterns', type=str_list, required=True,
             help='comma-sep. list of glob patterns for test target data')
+    parser.add_argument('--output', type=str, required=True,
+            help='output file name')
+    parser.add_argument('--use-openvino', action='store_true',
+            help='use OpenVINO for speed in inference. You must provide additional arguments')
+    parser.add_argument('--openvino-pre-model', action='store_true',
+            help='please provide OpenVINO files. This will prevent trace de code again and save you time')
+    parser.add_argument('--openvino-xml-file', type=str, default='model.xml',
+            help='please provide OpenVINO xml file')
+    parser.add_argument('--openvino-bin-file', type=str, default='model.bin',
+            help='please provide OpenVINO bin file')        
+    parser.add_argument('--onnx-file', type=str, default='model.onnx',
+            help='please provide ONNX file name to be saved')
 
-
+    
 def str_list(s):
     return s.split(',')
 
