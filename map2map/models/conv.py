@@ -14,8 +14,10 @@ class ConvBlock(nn.Module):
     'U': upsampling transposed convolution of kernel size 2 and stride 2
     'D': downsampling convolution of kernel size 2 and stride 2
     """
-    def __init__(self, in_chan, out_chan=None, mid_chan=None,
-            kernel_size=3, stride=1, seq='CBA'):
+
+    def __init__(
+        self, in_chan, out_chan=None, mid_chan=None, kernel_size=3, stride=1, seq="CBA"
+    ):
         super().__init__()
 
         if out_chan is None:
@@ -30,31 +32,30 @@ class ConvBlock(nn.Module):
 
         self.norm_chan = in_chan
         self.idx_conv = 0
-        self.num_conv = sum([seq.count(l) for l in ['U', 'D', 'C']])
+        self.num_conv = sum([seq.count(l) for l in ["U", "D", "C"]])
 
         layers = [self._get_layer(l) for l in seq]
 
         self.convs = nn.Sequential(*layers)
 
     def _get_layer(self, l):
-        if l == 'U':
+        if l == "U":
             in_chan, out_chan = self._setup_conv()
             return nn.ConvTranspose3d(in_chan, out_chan, 2, stride=2)
-        elif l == 'D':
+        elif l == "D":
             in_chan, out_chan = self._setup_conv()
             return nn.Conv3d(in_chan, out_chan, 2, stride=2)
-        elif l == 'C':
+        elif l == "C":
             in_chan, out_chan = self._setup_conv()
-            return nn.Conv3d(in_chan, out_chan, self.kernel_size,
-                    stride=self.stride)
-        elif l == 'B':
+            return nn.Conv3d(in_chan, out_chan, self.kernel_size, stride=self.stride)
+        elif l == "B":
             return nn.BatchNorm3d(self.norm_chan)
-            #return nn.InstanceNorm3d(self.norm_chan, affine=True, track_running_stats=True)
-            #return nn.InstanceNorm3d(self.norm_chan)
-        elif l == 'A':
+            # return nn.InstanceNorm3d(self.norm_chan, affine=True, track_running_stats=True)
+            # return nn.InstanceNorm3d(self.norm_chan)
+        elif l == "A":
             return nn.LeakyReLU()
         else:
-            raise NotImplementedError('layer type {} not supported'.format(l))
+            raise NotImplementedError("layer type {} not supported".format(l))
 
     def _setup_conv(self):
         self.idx_conv += 1
@@ -79,22 +80,26 @@ class ResBlock(ConvBlock):
 
     See `ConvBlock` for `seq` types.
     """
-    def __init__(self, in_chan, out_chan=None, mid_chan=None,
-            seq='CBACBA'):
-        super().__init__(in_chan, out_chan=out_chan,
-                mid_chan=mid_chan,
-                seq=seq[:-1] if seq[-1] == 'A' else seq)
+
+    def __init__(self, in_chan, out_chan=None, mid_chan=None, seq="CBACBA"):
+        super().__init__(
+            in_chan,
+            out_chan=out_chan,
+            mid_chan=mid_chan,
+            seq=seq[:-1] if seq[-1] == "A" else seq,
+        )
 
         if out_chan is None:
             self.skip = None
         else:
             self.skip = nn.Conv3d(in_chan, out_chan, 1)
 
-        if 'U' in seq or 'D' in seq:
-            raise NotImplementedError('upsample and downsample layers '
-                    'not supported yet')
+        if "U" in seq or "D" in seq:
+            raise NotImplementedError(
+                "upsample and downsample layers " "not supported yet"
+            )
 
-        if seq[-1] == 'A':
+        if seq[-1] == "A":
             self.act = nn.LeakyReLU()
         else:
             self.act = None
@@ -127,4 +132,3 @@ def narrow_like(a, b):
         half_width = int(width // 2)
         a = a.narrow(d, half_width, int(a.shape[d]) - width)
     return a
-

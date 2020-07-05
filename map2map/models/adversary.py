@@ -5,6 +5,7 @@ def adv_model_wrapper(module):
     """Wrap an adversary model to also take lists of Tensors as input,
     to be concatenated along the batch dimension
     """
+
     class new_module(module):
         def forward(self, x):
             if not isinstance(x, torch.Tensor):
@@ -23,6 +24,7 @@ def adv_criterion_wrapper(module):
     * expand target shape as that of input
     * return a list of losses, one for each pair of input and target Tensors
     """
+
     class new_module(module):
         def forward(self, input, target):
             assert isinstance(input, torch.Tensor)
@@ -34,19 +36,21 @@ def adv_criterion_wrapper(module):
                 input = self.split_input(input, target)
             assert len(input) == len(target)
 
-            if self.reduction == 'min':
+            if self.reduction == "min":
                 input = [torch.min(i).unsqueeze(0) for i in input]
 
             target = [t.expand_as(i) for i, t in zip(input, target)]
 
-            if self.reduction == 'min':
-                self.reduction = 'mean'  # average over batches
-                loss = [super(new_module, self).forward(i, t)
-                        for i, t in zip(input, target)]
-                self.reduction = 'min'
+            if self.reduction == "min":
+                self.reduction = "mean"  # average over batches
+                loss = [
+                    super(new_module, self).forward(i, t) for i, t in zip(input, target)
+                ]
+                self.reduction = "min"
             else:
-                loss = [super(new_module, self).forward(i, t)
-                        for i, t in zip(input, target)]
+                loss = [
+                    super(new_module, self).forward(i, t) for i, t in zip(input, target)
+                ]
 
             return loss
 

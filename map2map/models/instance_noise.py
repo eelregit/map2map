@@ -1,9 +1,11 @@
 from math import log
 import torch
 
+
 class InstanceNoise:
     """Instance noise, with a heuristic annealing schedule
     """
+
     def __init__(self, init_std, batches):
         self.init_std = init_std
         self.anneal = 1
