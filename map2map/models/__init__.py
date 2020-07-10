@@ -8,6 +8,8 @@ from .resample import resample, Resampler
 
 from .lag2eul import Lag2Eul
 
+from .lag2eul import Lag2Eul
+
 from .dice import DiceLoss, dice_loss
 
 from .adversary import adv_model_wrapper, adv_criterion_wrapper
