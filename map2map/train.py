@@ -15,7 +15,7 @@ from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 
 from .data import FieldDataset, GroupedRandomSampler
-from .data.figures import fig3d
+from .data.figures import plt_slices
 from . import models
 from .models import (narrow_like,
         adv_model_wrapper, adv_criterion_wrapper,
@@ -436,7 +436,7 @@ def train(epoch, loader, model, criterion, optimizer, scheduler,
         skip_chan = 0
         if args.adv and epoch >= args.adv_start and args.cgan:
             skip_chan = sum(args.in_chan)
-        logger.add_figure('fig/epoch/train', fig3d(
+        logger.add_figure('fig/epoch/train', plt_slices(
                 input[-1],
                 output[-1, skip_chan:],
                 target[-1, skip_chan:],
@@ -511,7 +511,7 @@ def validate(epoch, loader, model, criterion, adv_model, adv_criterion,
         skip_chan = 0
         if args.adv and epoch >= args.adv_start and args.cgan:
             skip_chan = sum(args.in_chan)
-        logger.add_figure('fig/epoch/val', fig3d(
+        logger.add_figure('fig/epoch/val', plt_slices(
                 input[-1],
                 output[-1, skip_chan:],
                 target[-1, skip_chan:],

@@ -9,14 +9,18 @@ from matplotlib.colors import Normalize, LogNorm, SymLogNorm
 from matplotlib.cm import ScalarMappable
 
 
-def fig3d(*fields, size=64, title=None, cmap=None, norm=None):
+def plt_slices(*fields, size=64, title=None, cmap=None, norm=None):
+    """Plot slices of fields of more than 2 spatial dimensions.
+    """
     fields = [field.detach().cpu().numpy() if isinstance(field, torch.Tensor)
             else field for field in fields]
 
     assert all(isinstance(field, np.ndarray) for field in fields)
+    assert all(field.ndim == fields[0].ndim for field in fields)
 
     nc = max(field.shape[0] for field in fields)
     nf = len(fields)
+    nd = fields[0].ndim - 1
 
     if title is not None:
         assert len(title) == nf
@@ -73,8 +77,8 @@ def fig3d(*fields, size=64, title=None, cmap=None, norm=None):
             norm_ = norm
 
         for c in range(field.shape[0]):
-            axes[c, f].pcolormesh(field[c, 0, :size, :size],
-                                  cmap=cmap_, norm=norm_)
+            s = (c,) + (0,) * (nd - 2) + (slice(64),) * 2
+            axes[c, f].pcolormesh(field[s], cmap=cmap_, norm=norm_)
 
             axes[c, f].set_aspect('equal')
 
