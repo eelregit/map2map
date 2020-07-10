@@ -5,6 +5,8 @@ from .patchgan import PatchGAN, PatchGAN42
 
 from .conv import narrow_like
 
+from .lag2eul import Lag2Eul
+
 from .dice import DiceLoss, dice_loss
 
 from .adversary import adv_model_wrapper, adv_criterion_wrapper
