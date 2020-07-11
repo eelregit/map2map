@@ -4,6 +4,7 @@ from .pyramid import PyramidNet
 from .patchgan import PatchGAN, PatchGAN42
 
 from .narrow import narrow_by, narrow_cast, narrow_like
+from .resample import resample, Resampler
 
 from .lag2eul import Lag2Eul
 

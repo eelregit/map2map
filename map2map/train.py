@@ -17,7 +17,7 @@ from torch.utils.tensorboard import SummaryWriter
 from .data import FieldDataset, GroupedRandomSampler
 from .data.figures import plt_slices
 from . import models
-from .models import (narrow_cast,
+from .models import (narrow_cast, resample
         adv_model_wrapper, adv_criterion_wrapper,
         add_spectral_norm, rm_spectral_norm,
         InstanceNoise)
@@ -338,9 +338,9 @@ def train(epoch, loader, model, criterion, optimizer, scheduler,
             print('output.shape =', output.shape)
             print('target.shape =', target.shape, flush=True)
 
-        if hasattr(model, 'scale_factor') and model.scale_factor != 1:
-            input = F.interpolate(input,
-                    scale_factor=model.scale_factor, mode='nearest')
+        if (hasattr(model.module, 'scale_factor')
+                and model.module.scale_factor != 1):
+            input = resample(input, model.module.scale_factor, narrow=False)
         input, output, target = narrow_cast(input, output, target)
 
         loss = criterion(output, target)
@@ -478,9 +478,9 @@ def validate(epoch, loader, model, criterion, adv_model, adv_criterion,
 
             output = model(input)
 
-            if hasattr(model, 'scale_factor') and model.scale_factor != 1:
-                input = F.interpolate(input,
-                        scale_factor=model.scale_factor, mode='nearest')
+            if (hasattr(model.module, 'scale_factor')
+                    and model.module.scale_factor != 1):
+                input = resample(input, model.module.scale_factor, narrow=False)
             input, output, target = narrow_cast(input, output, target)
 
             loss = criterion(output, target)
