@@ -21,6 +21,7 @@ def test(args):
         tgt_norms=args.tgt_norms,
         callback_at=args.callback_at,
         augment=False,
+        aug_shift=None,
         aug_add=None,
         aug_mul=None,
         crop=args.crop,

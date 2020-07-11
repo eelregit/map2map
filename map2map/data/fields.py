@@ -22,7 +22,11 @@ class FieldDataset(Dataset):
     Likewise for `tgt_norms`.
 
     Scalar and vector fields can be augmented by flipping and permutating the axes.
-    In 3D these form the full octahedral symmetry known as the Oh point group.
+    In 3D these form the full octahedral symmetry, the Oh group of order 48.
+    In 2D this is the dihedral group D4 of order 8.
+    1D is not supported, but can be done easily by preprocessing.
+    Fields can be augmented by random shift by a few pixels, useful for models
+    that treat neighboring pixels differently, e.g. with strided convolutions.
     Additive and multiplicative augmentation are also possible, but with all fields
     added or multiplied by the same factor.
 
@@ -44,7 +48,7 @@ class FieldDataset(Dataset):
     """
     def __init__(self, in_patterns, tgt_patterns,
                  in_norms=None, tgt_norms=None, callback_at=None,
-                 augment=False, aug_add=None, aug_mul=None,
+                 augment=False, aug_shift=None, aug_add=None, aug_mul=None,
                  crop=None, crop_start=None, crop_stop=None, crop_step=None,
                  pad=0, scale_factor=1,
                  cache=False, cache_maxsize=None, div_data=False,
@@ -85,6 +89,7 @@ class FieldDataset(Dataset):
         self.augment = augment
         if self.ndim == 1 and self.augment:
             raise ValueError('cannot augment 1D fields')
+        self.aug_shift = np.broadcast_to(aug_shift, (self.ndim,))
         self.aug_add = aug_add
         self.aug_mul = aug_mul
 
@@ -162,6 +167,10 @@ class FieldDataset(Dataset):
         in_fields, tgt_fields = self.get_fields(idx // self.ncrop)
 
         anchor = self.anchors[idx % self.ncrop]
+
+        for d, shift in enumerate(self.aug_shift):
+            if shift is not None:
+                anchor[d] += torch.randint(shift, (1,))
 
         in_fields = crop(in_fields, anchor, self.crop, self.pad)
         tgt_fields = crop(tgt_fields, anchor * self.scale_factor,

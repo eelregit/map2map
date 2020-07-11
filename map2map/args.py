@@ -100,6 +100,10 @@ def add_train_args(parser):
             help='comma-sep. list of glob patterns for validation target data')
     parser.add_argument('--augment', action='store_true',
             help='enable data augmentation of axis flipping and permutation')
+    parser.add_argument('--aug-shift', type=int,
+            help='data augmentation by shifting [0, aug_shift) pixels, '
+            'useful for models that treat neighboring pixels differently, '
+            'e.g. with strided convolutions')
     parser.add_argument('--aug-add', type=float,
             help='additive data augmentation, (normal) std, '
             'same factor for all fields')
