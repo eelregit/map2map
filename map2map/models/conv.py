@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 
+from .narrow import narrow_like
 from .swish import Swish
 
 
@@ -114,16 +115,3 @@ class ResBlock(ConvBlock):
             x = self.act(x)
 
         return x
-
-
-def narrow_like(a, b):
-    """Narrow a to be like b.
-
-    Try to be symmetric but cut more on the right for odd difference,
-    consistent with the downsampling.
-    """
-    for d in range(2, a.dim()):
-        width = a.shape[d] - b.shape[d]
-        half_width = width // 2
-        a = a.narrow(d, half_width, a.shape[d] - width)
-    return a

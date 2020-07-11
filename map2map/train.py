@@ -17,7 +17,7 @@ from torch.utils.tensorboard import SummaryWriter
 from .data import FieldDataset, GroupedRandomSampler
 from .data.figures import plt_slices
 from . import models
-from .models import (narrow_like,
+from .models import (narrow_cast,
         adv_model_wrapper, adv_criterion_wrapper,
         add_spectral_norm, rm_spectral_norm,
         InstanceNoise)
@@ -333,12 +333,15 @@ def train(epoch, loader, model, criterion, optimizer, scheduler,
         target = target.to(device, non_blocking=True)
 
         output = model(input)
+        if epoch == 0 and i == 0 and rank == 0:
+            print('input.shape =', input.shape)
+            print('output.shape =', output.shape)
+            print('target.shape =', target.shape, flush=True)
 
-        target = narrow_like(target, output)  # FIXME pad
         if hasattr(model, 'scale_factor') and model.scale_factor != 1:
             input = F.interpolate(input,
                     scale_factor=model.scale_factor, mode='nearest')
-        input = narrow_like(input, output)
+        input, output, target = narrow_cast(input, output, target)
 
         loss = criterion(output, target)
         epoch_loss[0] += loss.item()
@@ -475,11 +478,10 @@ def validate(epoch, loader, model, criterion, adv_model, adv_criterion,
 
             output = model(input)
 
-            target = narrow_like(target, output)  # FIXME pad
             if hasattr(model, 'scale_factor') and model.scale_factor != 1:
                 input = F.interpolate(input,
                         scale_factor=model.scale_factor, mode='nearest')
-            input = narrow_like(input, output)
+            input, output, target = narrow_cast(input, output, target)
 
             loss = criterion(output, target)
             epoch_loss[0] += loss.item()
