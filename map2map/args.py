@@ -96,10 +96,14 @@ def add_common_args(parser):
 def add_train_args(parser):
     add_common_args(parser)
 
+    parser.add_argument('--train-param-pattern', type=str, required=True,
+            help='glob pattern for training data parameters')
     parser.add_argument('--train-in-patterns', type=str_list, required=True,
             help='comma-sep. list of glob patterns for training input data')
     parser.add_argument('--train-tgt-patterns', type=str_list, required=True,
             help='comma-sep. list of glob patterns for training target data')
+    parser.add_argument('--val-param-pattern', type=str,
+            help='glob pattern for validation data parameters')
     parser.add_argument('--val-in-patterns', type=str_list,
             help='comma-sep. list of glob patterns for validation input data')
     parser.add_argument('--val-tgt-patterns', type=str_list,
@@ -160,6 +164,8 @@ def add_train_args(parser):
 def add_test_args(parser):
     add_common_args(parser)
 
+    parser.add_argument('--test-param-pattern', type=str, required=True,
+            help='glob pattern for test data parameters')
     parser.add_argument('--test-in-patterns', type=str_list, required=True,
             help='comma-sep. list of glob patterns for test input data')
     parser.add_argument('--test-tgt-patterns', type=str_list, required=True,
