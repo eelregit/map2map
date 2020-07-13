@@ -40,12 +40,13 @@ def add_common_args(parser):
     parser.add_argument('--tgt-norms', type=str_list, help='comma-sep. list '
             'of target normalization functions from .data.norms')
     parser.add_argument('--crop', type=int,
-            help='size to crop the input and target data')
+            help='size to crop the input and target data. Default is the '
+            'field size')
     parser.add_argument('--crop-start', type=int,
             help='starting point of the first crop. Default is the origin')
     parser.add_argument('--crop-stop', type=int,
-            help='stopping point of the last crop. Default is the corner '
-            'opposite to the origin')
+            help='stopping point of the last crop. Default is the opposite '
+            'corner to the origin')
     parser.add_argument('--crop-step', type=int,
             help='spacing between crops. Default is the crop size')
     parser.add_argument('--pad', default=0, type=int,
@@ -67,12 +68,12 @@ def add_common_args(parser):
             help='allow incompatible keys when loading model states',
             dest='load_state_strict')
 
-    parser.add_argument('--batches', default=1, type=int,
+    parser.add_argument('--batches', type=int, required=True,
             help='mini-batch size, per GPU in training or in total in testing')
     parser.add_argument('--loader-workers', type=int,
             help='number of data loading workers, per GPU in training or '
-            'in total in testing. '
-            'Default is the batch size or 0 for batch size 1')
+            'in total in testing. Default is 0 for single batch, '
+            'otherwise same as the batch size')
 
     parser.add_argument('--cache', action='store_true',
             help='enable LRU cache of input and target fields to reduce I/O')
@@ -117,8 +118,6 @@ def add_train_args(parser):
             help='enable spectral normalization on the adversary model')
     parser.add_argument('--adv-criterion', default='BCEWithLogitsLoss', type=str,
             help='adversarial criterion from torch.nn')
-    parser.add_argument('--min-reduction', action='store_true',
-            help='enable minimum reduction in adversarial criterion')
     parser.add_argument('--cgan', action='store_true',
             help='enable conditional GAN')
     parser.add_argument('--adv-start', default=0, type=int,
@@ -216,6 +215,11 @@ def set_train_args(args):
             args.adv_lr = args.lr
         if args.adv_weight_decay is None:
             args.adv_weight_decay = args.weight_decay
+
+    if args.cgan and not args.adv:
+        args.cgan =False
+        warnings.warn('Disabling cgan given adversary is disabled',
+                      RuntimeWarning)
 
 
 def set_test_args(args):

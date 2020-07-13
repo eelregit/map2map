@@ -176,7 +176,7 @@ def gpu_worker(local_rank, node, args):
 
         adv_criterion = import_attr(args.adv_criterion, nn.__name__, args.callback_at)
         adv_criterion = adv_criterion_wrapper(adv_criterion)
-        adv_criterion = adv_criterion(reduction='min' if args.min_reduction else 'mean')
+        adv_criterion = adv_criterion()
         adv_criterion.to(device)
 
         adv_optimizer = import_attr(args.optimizer, optim.__name__, args.callback_at)
@@ -410,19 +410,17 @@ def train(epoch, loader, model, criterion, optimizer, scheduler,
                         if '.weight' in n)
                 grads = [grads[0], grads[-1]]
                 grads = [g.detach().norm().item() for g in grads]
-                logger.add_scalars('grad', {
-                        'first': grads[0],
-                        'last': grads[-1],
-                    }, global_step=batch)
+                logger.add_scalar('grad/first', grads[0], global_step=batch)
+                logger.add_scalar('grad/last', grads[-1], global_step=batch)
                 if args.adv and epoch >= args.adv_start:
                     grads = list(p.grad for n, p in adv_model.named_parameters()
                             if '.weight' in n)
                     grads = [grads[0], grads[-1]]
                     grads = [g.detach().norm().item() for g in grads]
-                    logger.add_scalars('grad/adv', {
-                            'first': grads[0],
-                            'last': grads[-1],
-                        }, global_step=batch)
+                    logger.add_scalars('grad/adv/first', grads[0],
+                                       global_step=batch)
+                    logger.add_scalars('grad/adv/last', grads[-1],
+                                       global_step=batch)
 
                 if args.adv and epoch >= args.adv_start and noise_std > 0:
                     logger.add_scalar('instance_noise', noise_std,
