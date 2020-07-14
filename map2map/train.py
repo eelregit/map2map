@@ -14,7 +14,7 @@ from torch.utils.data.distributed import DistributedSampler
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 
-from .data import FieldDataset, GroupedRandomSampler
+from .data import FieldDataset
 from .data.figures import plt_slices
 from . import models
 from .models import (narrow_cast, resample,
