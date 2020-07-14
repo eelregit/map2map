@@ -74,23 +74,8 @@ def gpu_worker(local_rank, node, args):
         crop_step=args.crop_step,
         pad=args.pad,
         scale_factor=args.scale_factor,
-        cache=args.cache,
-        cache_maxsize=args.cache_maxsize,
-        div_data=args.div_data,
-        rank=rank,
-        world_size=args.world_size,
     )
-    if args.div_data:
-        train_sampler = GroupedRandomSampler(
-            train_dataset,
-            group_size=None if args.cache_maxsize is None else
-                       args.cache_maxsize * train_dataset.ncrop,
-        )
-    else:
-        try:
-            train_sampler = DistributedSampler(train_dataset, shuffle=True)
-        except TypeError:
-            train_sampler = DistributedSampler(train_dataset)  # old pytorch
+    train_sampler = DistributedSampler(train_dataset, shuffle=True)
     train_loader = DataLoader(
         train_dataset,
         batch_size=args.batches,
@@ -117,19 +102,8 @@ def gpu_worker(local_rank, node, args):
             crop_step=args.crop_step,
             pad=args.pad,
             scale_factor=args.scale_factor,
-            cache=args.cache,
-            cache_maxsize=None if args.cache_maxsize is None else 1,
-            div_data=args.div_data,
-            rank=rank,
-            world_size=args.world_size,
         )
-        if args.div_data:
-            val_sampler = None
-        else:
-            try:
-                val_sampler = DistributedSampler(val_dataset, shuffle=False)
-            except TypeError:
-                val_sampler = DistributedSampler(val_dataset)  # old pytorch
+        val_sampler = DistributedSampler(val_dataset, shuffle=False)
         val_loader = DataLoader(
             val_dataset,
             batch_size=args.batches,
@@ -252,8 +226,7 @@ def gpu_worker(local_rank, node, args):
                                             args.instance_noise_batches)
 
     for epoch in range(start_epoch, args.epochs):
-        if not args.div_data:
-            train_sampler.set_epoch(epoch)
+        train_sampler.set_epoch(epoch)
 
         train_loss = train(epoch, train_loader,
             model, criterion, optimizer, scheduler,
@@ -273,10 +246,7 @@ def gpu_worker(local_rank, node, args):
                 adv_scheduler.step(epoch_loss[0])
 
         if rank == 0:
-            try:
-                logger.flush()
-            except AttributeError:
-                logger.close()  # old pytorch
+            logger.flush()
 
             if ((min_loss is None or epoch_loss[0] < min_loss[0])
                     and epoch >= args.adv_start):
@@ -298,12 +268,6 @@ def gpu_worker(local_rank, node, args):
             tmp_link = '{}.pt'.format(time.time())
             os.symlink(state_file, tmp_link)  # workaround to overwrite
             os.rename(tmp_link, ckpt_link)
-
-    if args.cache:
-        print('rank {} train data: {}'.format(
-            rank, train_dataset.get_fields.cache_info()))
-        print('rank {} val   data: {}'.format(
-            rank, val_dataset.get_fields.cache_info()))
 
     dist.destroy_process_group()
 

@@ -1,5 +1,4 @@
 from glob import glob
-from functools import lru_cache
 import numpy as np
 import torch
 import torch.nn.functional as F
@@ -39,20 +38,12 @@ class FieldDataset(Dataset):
     Setting integer `scale_factor` greater than 1 will crop target bigger than
     the input for super-resolution, in which case `crop` and `pad` are sizes of
     the input resolution.
-
-    `cache` enables LRU cache of the input and target fields, up to `cache_maxsize`
-    pairs (unlimited by default).
-    `div_data` enables data division, to be used with `cache`, so that different
-    fields are cached in different GPU processes.
-    This saves CPU RAM but limits stochasticity.
     """
     def __init__(self, in_patterns, tgt_patterns,
                  in_norms=None, tgt_norms=None, callback_at=None,
                  augment=False, aug_shift=None, aug_add=None, aug_mul=None,
                  crop=None, crop_start=None, crop_stop=None, crop_step=None,
-                 pad=0, scale_factor=1,
-                 cache=False, cache_maxsize=None, div_data=False,
-                 rank=None, world_size=None):
+                 pad=0, scale_factor=1):
         in_file_lists = [sorted(glob(p)) for p in in_patterns]
         self.in_files = list(zip(* in_file_lists))
 
@@ -65,10 +56,12 @@ class FieldDataset(Dataset):
 
         assert self.nfile > 0, 'file not found for {}'.format(in_patterns)
 
-        self.in_chan = [np.load(f).shape[0] for f in self.in_files[0]]
-        self.tgt_chan = [np.load(f).shape[0] for f in self.tgt_files[0]]
+        self.in_chan = [np.load(f, mmap_mode='r').shape[0]
+                        for f in self.in_files[0]]
+        self.tgt_chan = [np.load(f, mmap_mode='r').shape[0]
+                         for f in self.tgt_files[0]]
 
-        self.size = np.load(self.in_files[0][0]).shape[1:]
+        self.size = np.load(self.in_files[0][0], mmap_mode='r').shape[1:]
         self.size = np.asarray(self.size)
         self.ndim = len(self.size)
 
@@ -126,47 +119,16 @@ class FieldDataset(Dataset):
                 'only support integer upsampling'
         self.scale_factor = scale_factor
 
-        if cache:
-            self.get_fields = lru_cache(maxsize=cache_maxsize)(self.get_fields)
-
-        if div_data:
-            self.samples = []
-
-            # first add full fields when num_fields > num_GPU
-            for i in range(rank, self.nfile // world_size * world_size,
-                           world_size):
-                self.samples.extend(list(
-                    range(i * self.ncrop, (i + 1) * self.ncrop)
-                ))
-
-            # then split the rest into fractions of fields
-            # drop the last incomplete batch of samples
-            frac_start = self.nfile // world_size * world_size * self.ncrop
-            frac_samples = self.nfile % world_size * self.ncrop // world_size
-            self.samples.extend(list(
-                range(frac_start + rank * frac_samples,
-                      frac_start + (rank + 1) * frac_samples)
-            ))
-        else:
-            self.samples = list(range(self.nfile * self.ncrop))
-        self.nsample = len(self.samples)
-
-        self.rank = rank
-
-    def get_fields(self, idx):
-        in_fields = [np.load(f) for f in self.in_files[idx]]
-        tgt_fields = [np.load(f) for f in self.tgt_files[idx]]
-        return in_fields, tgt_fields
-
     def __len__(self):
-        return self.nsample
+        return self.nfile * self.ncrop
 
     def __getitem__(self, idx):
-        idx = self.samples[idx]
+        ifile, icrop = divmod(idx, self.ncrop)
 
-        in_fields, tgt_fields = self.get_fields(idx // self.ncrop)
+        in_fields = [np.load(f, mmap_mode='r') for f in self.in_files[ifile]]
+        tgt_fields = [np.load(f, mmap_mode='r') for f in self.tgt_files[ifile]]
 
-        anchor = self.anchors[idx % self.ncrop]
+        anchor = self.anchors[icrop]
 
         for d, shift in enumerate(self.aug_shift):
             if shift is not None:
@@ -221,7 +183,8 @@ def crop(fields, anchor, crop, pad, size):
             i = i.reshape((-1,) + (1,) * (ndim - d - 1))
             ind.append(i)
 
-        x = x[ind]
+        x = x[tuple(ind)]
+        x.setflags(write=True)  # workaround numpy bug before 1.18
 
         new_fields.append(x)
 

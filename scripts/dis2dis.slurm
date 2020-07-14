@@ -39,8 +39,7 @@ srun m2m.py train \
     --in-norms cosmology.dis --tgt-norms cosmology.dis --augment --crop 128 --pad 20 \
     --model VNet --adv-model UNet --cgan \
     --lr 0.0001 --adv-lr 0.0004 --batches 1 --loader-workers 0 \
-    --epochs 1024 --seed $RANDOM \
-    --cache --div-data
+    --epochs 1024 --seed $RANDOM
 
 
 date

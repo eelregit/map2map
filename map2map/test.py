@@ -30,7 +30,6 @@ def test(args):
         crop_step=args.crop_step,
         pad=args.pad,
         scale_factor=args.scale_factor,
-        cache=args.cache,
     )
     test_loader = DataLoader(
         test_dataset,

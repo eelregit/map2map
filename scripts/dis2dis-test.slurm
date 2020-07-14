@@ -38,8 +38,7 @@ m2m.py test \
     --in-norms cosmology.dis --tgt-norms cosmology.dis --crop 256 --pad 20 \
     --model VNet \
     --load-state best_model.pt \
-    --batches 1 --loader-workers 0 \
-    --cache
+    --batches 1 --loader-workers 0
 
 
 date

@@ -63,7 +63,7 @@ def add_common_args(parser):
     parser.add_argument('--load-state', default=ckpt_link, type=str,
             help='path to load the states of model, optimizer, rng, etc. '
             'Default is the checkpoint. '
-            'Start from scratch if set empty or the checkpoint is missing')
+            'Start from scratch in case of empty string or missing checkpoint')
     parser.add_argument('--load-state-non-strict', action='store_false',
             help='allow incompatible keys when loading model states',
             dest='load_state_strict')
@@ -75,12 +75,6 @@ def add_common_args(parser):
             'in total in testing. Default is 0 for single batch, '
             'otherwise same as the batch size')
 
-    parser.add_argument('--cache', action='store_true',
-            help='enable LRU cache of input and target fields to reduce I/O')
-    parser.add_argument('--cache-maxsize', type=int,
-            help='maximum pairs of fields in cache, unlimited by default. '
-            'This only applies to training if not None, '
-            'in which case the testing cache maxsize is 1')
     parser.add_argument('--callback-at', type=lambda s: os.path.abspath(s),
             help='directory of custorm code defining callbacks for models, '
             'norms, criteria, and optimizers. Disabled if not set. '
@@ -153,8 +147,6 @@ def add_train_args(parser):
     parser.add_argument('--seed', default=42, type=int,
             help='seed for initializing training')
 
-    parser.add_argument('--div-data', action='store_true',
-            help='enable data division among GPUs, useful with cache')
     parser.add_argument('--dist-backend', default='nccl', type=str,
             choices=['gloo', 'nccl'], help='distributed backend')
     parser.add_argument('--log-interval', default=100, type=int,
@@ -189,17 +181,6 @@ def set_common_args(args):
         args.loader_workers = 0
         if args.batches > 1:
             args.loader_workers = args.batches
-
-    if not args.cache and args.cache_maxsize is not None:
-        args.cache_maxsize = None
-        warnings.warn('Resetting cache maxsize given cache is disabled',
-                      RuntimeWarning)
-    if (args.cache and args.cache_maxsize is not None
-            and args.cache_maxsize < 1):
-        args.cache = False
-        args.cache_maxsize = None
-        warnings.warn('Disabling cache given cache maxsize < 1',
-                      RuntimeWarning)
 
 
 def set_train_args(args):
