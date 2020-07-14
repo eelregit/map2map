@@ -1,12 +1,12 @@
+import sys
 from pprint import pprint
 import numpy as np
 import torch
-import sys
 from torch.utils.data import DataLoader
 
 from .data import FieldDataset
 from . import models
-from .models import narrow_like
+from .models import narrow_cast
 from .utils import import_attr, load_model_state_dict
 
 
@@ -21,12 +21,15 @@ def test(args):
         tgt_norms=args.tgt_norms,
         callback_at=args.callback_at,
         augment=False,
+        aug_shift=None,
         aug_add=None,
         aug_mul=None,
         crop=args.crop,
+        crop_start=args.crop_start,
+        crop_stop=args.crop_stop,
+        crop_step=args.crop_step,
         pad=args.pad,
         scale_factor=args.scale_factor,
-        cache=args.cache,
     )
     test_loader = DataLoader(
         test_dataset,
@@ -54,12 +57,7 @@ def test(args):
     with torch.no_grad():
         for i, (input, target) in enumerate(test_loader):
             output = model(input)
-            if args.pad > 0:  # FIXME
-                output = narrow_like(output, target)
-                input = narrow_like(input, target)
-            else:
-                target = narrow_like(target, output)
-                input = narrow_like(input, output)
+            input, output, target = narrow_cast(input, output, target)
 
             loss = criterion(output, target)
 

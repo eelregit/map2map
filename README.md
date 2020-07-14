@@ -33,19 +33,22 @@ For all command line options look at `map2map/args.py` or do `m2m.py -h`.
 
 Put each field in one npy file.
 Structure your data to start with the channel axis and then the spatial
-dimensions.
-For example a 2D vector field of size `64^2` should have shape `(2, 64,
-64)`.
+dimensions, e.g. `(2, 64, 64)` for a 2D vector field of size `64^2` and
+`(1, 32, 32, 32)` for a 3D scalar field of size `32^3`.
 Specify the data path with
 [glob patterns](https://docs.python.org/3/library/glob.html).
 
 During training, pairs of input and target fields are loaded.
 Both input and target data can consist of multiple fields, which are
 then concatenated along the channel axis.
+
+
+#### Data cropping
+
 If the size of a pair of input and target fields is too large to fit in
-a GPU, we can crop part of them to form pairs of samples (see `--crop`).
-Each field can be cropped multiple times, along each dimension,
-controlled by the spacing between two adjacent crops (see `--step`).
+a GPU, we can crop part of them to form pairs of samples.
+Each field can be cropped multiple times, along each dimension.
+See `--crop`, `--crop-start`, `--crop-stop`, and `--crop-step`.
 The total sample size is the number of input and target pairs multiplied
 by the number of cropped samples per pair.
 

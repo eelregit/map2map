@@ -1,7 +1,8 @@
 import torch
 import torch.nn as nn
 
-from .conv import ConvBlock, narrow_like
+from .conv import ConvBlock
+from .narrow import narrow_like
 
 
 class UNet(nn.Module):

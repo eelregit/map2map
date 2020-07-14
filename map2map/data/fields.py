@@ -1,5 +1,4 @@
 from glob import glob
-from functools import lru_cache
 import numpy as np
 import torch
 import torch.nn.functional as F
@@ -14,6 +13,7 @@ class FieldDataset(Dataset):
 
     `in_patterns` is a list of glob patterns for the input field files.
     For example, `in_patterns=['/train/field1_*.npy', '/train/field2_*.npy']`.
+    Each pattern in the list is a new field.
     Likewise `tgt_patterns` is for target fields.
     Input and target fields are matched by sorting the globbed files.
 
@@ -21,29 +21,29 @@ class FieldDataset(Dataset):
     Likewise for `tgt_norms`.
 
     Scalar and vector fields can be augmented by flipping and permutating the axes.
-    In 3D these form the full octahedral symmetry known as the Oh point group.
+    In 3D these form the full octahedral symmetry, the Oh group of order 48.
+    In 2D this is the dihedral group D4 of order 8.
+    1D is not supported, but can be done easily by preprocessing.
+    Fields can be augmented by random shift by a few pixels, useful for models
+    that treat neighboring pixels differently, e.g. with strided convolutions.
     Additive and multiplicative augmentation are also possible, but with all fields
     added or multiplied by the same factor.
 
-    Input and target fields can be cropped.
-    Input fields can be padded assuming periodic boundary condition.
+    Input and target fields can be cropped, to return multiple slices of size
+    `crop` from each field.
+    The crop anchors are controlled by `crop_start`, `crop_stop`, and `crop_step`.
+    Input (but not target) fields can be padded beyond the crop size assuming
+    periodic boundary condition.
 
     Setting integer `scale_factor` greater than 1 will crop target bigger than
     the input for super-resolution, in which case `crop` and `pad` are sizes of
     the input resolution.
-
-    `cache` enables LRU cache of the input and target fields, up to `cache_maxsize`
-    pairs (unlimited by default).
-    `div_data` enables data division, to be used with `cache`, so that different
-    fields are cached in different GPU processes.
-    This saves CPU RAM but limits stochasticity.
     """
     def __init__(self, in_patterns, tgt_patterns,
                  in_norms=None, tgt_norms=None, callback_at=None,
-                 augment=False, aug_add=None, aug_mul=None,
-                 crop=None, pad=0, scale_factor=1,
-                 cache=False, cache_maxsize=None, div_data=False,
-                 rank=None, world_size=None):
+                 augment=False, aug_shift=None, aug_add=None, aug_mul=None,
+                 crop=None, crop_start=None, crop_stop=None, crop_step=None,
+                 pad=0, scale_factor=1):
         in_file_lists = [sorted(glob(p)) for p in in_patterns]
         self.in_files = list(zip(* in_file_lists))
 
@@ -54,12 +54,14 @@ class FieldDataset(Dataset):
                 'number of input and target fields do not match'
         self.nfile = len(self.in_files)
 
-        assert self.nfile > 0, 'file not found'
+        assert self.nfile > 0, 'file not found for {}'.format(in_patterns)
 
-        self.in_chan = [np.load(f).shape[0] for f in self.in_files[0]]
-        self.tgt_chan = [np.load(f).shape[0] for f in self.tgt_files[0]]
+        self.in_chan = [np.load(f, mmap_mode='r').shape[0]
+                        for f in self.in_files[0]]
+        self.tgt_chan = [np.load(f, mmap_mode='r').shape[0]
+                         for f in self.tgt_files[0]]
 
-        self.size = np.load(self.in_files[0][0]).shape[1:]
+        self.size = np.load(self.in_files[0][0], mmap_mode='r').shape[1:]
         self.size = np.asarray(self.size)
         self.ndim = len(self.size)
 
@@ -80,16 +82,35 @@ class FieldDataset(Dataset):
         self.augment = augment
         if self.ndim == 1 and self.augment:
             raise ValueError('cannot augment 1D fields')
+        self.aug_shift = np.broadcast_to(aug_shift, (self.ndim,))
         self.aug_add = aug_add
         self.aug_mul = aug_mul
 
         if crop is None:
             self.crop = self.size
-            self.reps = np.ones_like(self.size)
         else:
-            self.crop = np.broadcast_to(crop, self.size.shape)
-            self.reps = self.size // self.crop
-        self.ncrop = int(np.prod(self.reps))
+            self.crop = np.broadcast_to(crop, (self.ndim,))
+
+        if crop_start is None:
+            crop_start = np.zeros_like(self.size)
+        else:
+            crop_start = np.broadcast_to(crop_start, (self.ndim,))
+
+        if crop_stop is None:
+            crop_stop = self.size
+        else:
+            crop_stop = np.broadcast_to(crop_stop, (self.ndim,))
+
+        if crop_step is None:
+            crop_step = self.crop
+        else:
+            crop_step = np.broadcast_to(crop_step, (self.ndim,))
+
+        self.anchors = np.stack(np.mgrid[tuple(
+            slice(crop_start[d], crop_stop[d], crop_step[d])
+            for d in range(self.ndim)
+        )], axis=-1).reshape(-1, self.ndim)
+        self.ncrop = len(self.anchors)
 
         assert isinstance(pad, int), 'only support symmetric padding for now'
         self.pad = np.broadcast_to(pad, (self.ndim, 2))
@@ -98,52 +119,25 @@ class FieldDataset(Dataset):
                 'only support integer upsampling'
         self.scale_factor = scale_factor
 
-        if cache:
-            self.get_fields = lru_cache(maxsize=cache_maxsize)(self.get_fields)
-
-        if div_data:
-            self.samples = []
-
-            # first add full fields when num_fields > num_GPU
-            for i in range(rank, self.nfile // world_size * world_size,
-                           world_size):
-                self.samples.append(
-                    range(i * self.ncrop, (i + 1) * self.ncrop)
-                )
-
-            # then split the rest into fractions of fields
-            # drop the last incomplete batch of samples
-            frac_start = self.nfile // world_size * world_size * self.ncrop
-            frac_samples = self.nfile % world_size * self.ncrop // world_size
-            self.samples.append(range(frac_start + rank * frac_samples,
-                                      frac_start + (rank + 1) * frac_samples))
-
-            self.samples = np.concatenate(self.samples)
-        else:
-            self.samples = np.arange(self.nfile * self.ncrop)
-        self.nsample = len(self.samples)
-
-        self.rank = rank
-
-    def get_fields(self, idx):
-        in_fields = [np.load(f) for f in self.in_files[idx]]
-        tgt_fields = [np.load(f) for f in self.tgt_files[idx]]
-        return in_fields, tgt_fields
-
     def __len__(self):
-        return self.nsample
+        return self.nfile * self.ncrop
 
     def __getitem__(self, idx):
-        idx = self.samples[idx]
+        ifile, icrop = divmod(idx, self.ncrop)
 
-        in_fields, tgt_fields = self.get_fields(idx // self.ncrop)
+        in_fields = [np.load(f, mmap_mode='r') for f in self.in_files[ifile]]
+        tgt_fields = [np.load(f, mmap_mode='r') for f in self.tgt_files[ifile]]
 
-        start = np.unravel_index(idx % self.ncrop, self.reps) * self.crop
+        anchor = self.anchors[icrop]
 
-        in_fields = crop(in_fields, start, self.crop, self.pad)
-        tgt_fields = crop(tgt_fields, start * self.scale_factor,
+        for d, shift in enumerate(self.aug_shift):
+            if shift is not None:
+                anchor[d] += torch.randint(shift, (1,))
+
+        in_fields = crop(in_fields, anchor, self.crop, self.pad, self.size)
+        tgt_fields = crop(tgt_fields, anchor * self.scale_factor,
                           self.crop * self.scale_factor,
-                          np.zeros_like(self.pad))
+                          np.zeros_like(self.pad), self.size)
 
         in_fields = [torch.from_numpy(f).to(torch.float32) for f in in_fields]
         tgt_fields = [torch.from_numpy(f).to(torch.float32) for f in tgt_fields]
@@ -176,12 +170,21 @@ class FieldDataset(Dataset):
         return in_fields, tgt_fields
 
 
-def crop(fields, start, crop, pad):
+def crop(fields, anchor, crop, pad, size):
+    ndim = len(size)
+    assert all(len(x) == ndim for x in [anchor, crop, pad, size]), 'inconsistent ndim'
+
     new_fields = []
     for x in fields:
-        for d, (i, c, (p0, p1)) in enumerate(zip(start, crop, pad)):
-            begin, end = i - p0, i + c + p1
-            x = x.take(range(begin, end), axis=1 + d, mode='wrap')
+        ind = [slice(None)]
+        for d, (a, c, (p0, p1), s) in enumerate(zip(anchor, crop, pad, size)):
+            i = np.arange(a - p0, a + c + p1)
+            i %= s
+            i = i.reshape((-1,) + (1,) * (ndim - d - 1))
+            ind.append(i)
+
+        x = x[tuple(ind)]
+        x.setflags(write=True)  # workaround numpy bug before 1.18
 
         new_fields.append(x)
 

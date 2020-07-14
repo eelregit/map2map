@@ -15,9 +15,9 @@ from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 
 from .data import FieldDataset, GroupedRandomSampler
-from .data.figures import fig3d
+from .data.figures import plt_slices
 from . import models
-from .models import (narrow_like, Lag2Eul,
+from .models import (narrow_like, resample, Lag2Eul,
         adv_model_wrapper, adv_criterion_wrapper,
         add_spectral_norm, rm_spectral_norm,
         InstanceNoise)
@@ -65,28 +65,17 @@ def gpu_worker(local_rank, node, args):
         tgt_norms=args.tgt_norms,
         callback_at=args.callback_at,
         augment=args.augment,
+        aug_shift=args.aug_shift,
         aug_add=args.aug_add,
         aug_mul=args.aug_mul,
         crop=args.crop,
+        crop_start=args.crop_start,
+        crop_stop=args.crop_stop,
+        crop_step=args.crop_step,
         pad=args.pad,
         scale_factor=args.scale_factor,
-        cache=args.cache,
-        cache_maxsize=args.cache_maxsize,
-        div_data=args.div_data,
-        rank=rank,
-        world_size=args.world_size,
     )
-    if args.div_data:
-        train_sampler = GroupedRandomSampler(
-            train_dataset,
-            group_size=None if args.cache_maxsize is None else
-                       args.cache_maxsize * train_dataset.ncrop,
-        )
-    else:
-        try:
-            train_sampler = DistributedSampler(train_dataset, shuffle=True)
-        except TypeError:
-            train_sampler = DistributedSampler(train_dataset)  # old pytorch
+    train_sampler = DistributedSampler(train_dataset, shuffle=True)
     train_loader = DataLoader(
         train_dataset,
         batch_size=args.batches,
@@ -104,24 +93,17 @@ def gpu_worker(local_rank, node, args):
             tgt_norms=args.tgt_norms,
             callback_at=args.callback_at,
             augment=False,
+            aug_shift=None,
             aug_add=None,
             aug_mul=None,
             crop=args.crop,
+            crop_start=args.crop_start,
+            crop_stop=args.crop_stop,
+            crop_step=args.crop_step,
             pad=args.pad,
             scale_factor=args.scale_factor,
-            cache=args.cache,
-            cache_maxsize=None if args.cache_maxsize is None else 1,
-            div_data=args.div_data,
-            rank=rank,
-            world_size=args.world_size,
         )
-        if args.div_data:
-            val_sampler = None
-        else:
-            try:
-                val_sampler = DistributedSampler(val_dataset, shuffle=False)
-            except TypeError:
-                val_sampler = DistributedSampler(val_dataset)  # old pytorch
+        val_sampler = DistributedSampler(val_dataset, shuffle=False)
         val_loader = DataLoader(
             val_dataset,
             batch_size=args.batches,
@@ -170,7 +152,7 @@ def gpu_worker(local_rank, node, args):
 
         adv_criterion = import_attr(args.adv_criterion, nn.__name__, args.callback_at)
         adv_criterion = adv_criterion_wrapper(adv_criterion)
-        adv_criterion = adv_criterion(reduction='min' if args.min_reduction else 'mean')
+        adv_criterion = adv_criterion()
         adv_criterion.to(device)
 
         adv_optimizer = import_attr(args.optimizer, optim.__name__, args.callback_at)
@@ -246,8 +228,7 @@ def gpu_worker(local_rank, node, args):
                                             args.instance_noise_batches)
 
     for epoch in range(start_epoch, args.epochs):
-        if not args.div_data:
-            train_sampler.set_epoch(epoch)
+        train_sampler.set_epoch(epoch)
 
         train_loss = train(epoch, train_loader,
             model, dis2den, criterion, optimizer, scheduler,
@@ -267,10 +248,7 @@ def gpu_worker(local_rank, node, args):
                 adv_scheduler.step(epoch_loss[0])
 
         if rank == 0:
-            try:
-                logger.flush()
-            except AttributeError:
-                logger.close()  # old pytorch
+            logger.flush()
 
             if ((min_loss is None or epoch_loss[0] < min_loss[0])
                     and epoch >= args.adv_start):
@@ -292,12 +270,6 @@ def gpu_worker(local_rank, node, args):
             tmp_link = '{}.pt'.format(time.time())
             os.symlink(state_file, tmp_link)  # workaround to overwrite
             os.rename(tmp_link, ckpt_link)
-
-    if args.cache:
-        print('rank {} train data: {}'.format(
-            rank, train_dataset.get_fields.cache_info()))
-        print('rank {} val   data: {}'.format(
-            rank, val_dataset.get_fields.cache_info()))
 
     dist.destroy_process_group()
 
@@ -327,12 +299,15 @@ def train(epoch, loader, model, dis2den, criterion, optimizer, scheduler,
         target = target.to(device, non_blocking=True)
 
         output = model(input)
+        if epoch == 0 and i == 0 and rank == 0:
+            print('input.shape =', input.shape)
+            print('output.shape =', output.shape)
+            print('target.shape =', target.shape, flush=True)
 
-        target = narrow_like(target, output)  # FIXME pad
-        if hasattr(model, 'scale_factor') and model.scale_factor != 1:
-            input = F.interpolate(input,
-                    scale_factor=model.scale_factor, mode='nearest')
-        input = narrow_like(input, output)
+        if (hasattr(model.module, 'scale_factor')
+                and model.module.scale_factor != 1):
+            input = resample(input, model.module.scale_factor, narrow=False)
+        input, output, target = narrow_cast(input, output, target)
 
         output, target = dis2den(output, target)
 
@@ -340,13 +315,11 @@ def train(epoch, loader, model, dis2den, criterion, optimizer, scheduler,
         epoch_loss[0] += loss.item()
 
         if args.adv and epoch >= args.adv_start:
-            try:
-                noise_std = args.instance_noise.std(adv_loss)
-            except NameError:
-                noise_std = args.instance_noise.std(0)
+            noise_std = args.instance_noise.std()
             if noise_std > 0:
                 noise = noise_std * torch.randn_like(output)
                 output = output + noise.detach()
+                noise = noise_std * torch.randn_like(target)
                 target = target + noise.detach()
                 del noise
 
@@ -405,21 +378,19 @@ def train(epoch, loader, model, dis2den, criterion, optimizer, scheduler,
                         if '.weight' in n)
                 grads = [grads[0], grads[-1]]
                 grads = [g.detach().norm().item() for g in grads]
-                logger.add_scalars('grad', {
-                        'first': grads[0],
-                        'last': grads[-1],
-                    }, global_step=batch)
+                logger.add_scalar('grad/first', grads[0], global_step=batch)
+                logger.add_scalar('grad/last', grads[-1], global_step=batch)
                 if args.adv and epoch >= args.adv_start:
                     grads = list(p.grad for n, p in adv_model.named_parameters()
                             if '.weight' in n)
                     grads = [grads[0], grads[-1]]
                     grads = [g.detach().norm().item() for g in grads]
-                    logger.add_scalars('grad/adv', {
-                            'first': grads[0],
-                            'last': grads[-1],
-                        }, global_step=batch)
+                    logger.add_scalars('grad/adv/first', grads[0],
+                                       global_step=batch)
+                    logger.add_scalars('grad/adv/last', grads[-1],
+                                       global_step=batch)
 
-                if args.adv and epoch >= args.adv_start:
+                if args.adv and epoch >= args.adv_start and noise_std > 0:
                     logger.add_scalar('instance_noise', noise_std,
                             global_step=batch)
 
@@ -440,7 +411,7 @@ def train(epoch, loader, model, dis2den, criterion, optimizer, scheduler,
         skip_chan = 0
         if args.adv and epoch >= args.adv_start and args.cgan:
             skip_chan = sum(args.in_chan)
-        logger.add_figure('fig/epoch/train', fig3d(
+        logger.add_figure('fig/epoch/train', plt_slices(
                 input[-1],
                 output[-1, skip_chan:],
                 target[-1, skip_chan:],
@@ -471,11 +442,10 @@ def validate(epoch, loader, model, dis2den, criterion, adv_model, adv_criterion,
 
             output = model(input)
 
-            target = narrow_like(target, output)  # FIXME pad
-            if hasattr(model, 'scale_factor') and model.scale_factor != 1:
-                input = F.interpolate(input,
-                        scale_factor=model.scale_factor, mode='nearest')
-            input = narrow_like(input, output)
+            if (hasattr(model.module, 'scale_factor')
+                    and model.module.scale_factor != 1):
+                input = resample(input, model.module.scale_factor, narrow=False)
+            input, output, target = narrow_cast(input, output, target)
 
             output, target = dis2den(output, target)
 
@@ -517,7 +487,7 @@ def validate(epoch, loader, model, dis2den, criterion, adv_model, adv_criterion,
         skip_chan = 0
         if args.adv and epoch >= args.adv_start and args.cgan:
             skip_chan = sum(args.in_chan)
-        logger.add_figure('fig/epoch/val', fig3d(
+        logger.add_figure('fig/epoch/val', plt_slices(
                 input[-1],
                 output[-1, skip_chan:],
                 target[-1, skip_chan:],

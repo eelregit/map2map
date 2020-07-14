@@ -40,39 +40,41 @@ def add_common_args(parser):
     parser.add_argument('--tgt-norms', type=str_list, help='comma-sep. list '
             'of target normalization functions from .data.norms')
     parser.add_argument('--crop', type=int,
-            help='size to crop the input and target data')
+            help='size to crop the input and target data. Default is the '
+            'field size')
+    parser.add_argument('--crop-start', type=int,
+            help='starting point of the first crop. Default is the origin')
+    parser.add_argument('--crop-stop', type=int,
+            help='stopping point of the last crop. Default is the opposite '
+            'corner to the origin')
+    parser.add_argument('--crop-step', type=int,
+            help='spacing between crops. Default is the crop size')
     parser.add_argument('--pad', default=0, type=int,
             help='size to pad the input data beyond the crop size, assuming '
             'periodic boundary condition')
     parser.add_argument('--scale-factor', default=1, type=int,
-            help='input upsampling factor for super-resolution purpose, in '
-            'which case crop and pad will be taken at the original resolution')
+            help='upsampling factor for super-resolution, in which case '
+            'crop and pad are sizes of the input resolution')
 
-    parser.add_argument('--model', required=True, type=str,
+    parser.add_argument('--model', type=str, required=True,
             help='model from .models')
     parser.add_argument('--criterion', default='MSELoss', type=str,
             help='model criterion from torch.nn')
     parser.add_argument('--load-state', default=ckpt_link, type=str,
             help='path to load the states of model, optimizer, rng, etc. '
             'Default is the checkpoint. '
-            'Start from scratch if set empty or the checkpoint is missing')
+            'Start from scratch in case of empty string or missing checkpoint')
     parser.add_argument('--load-state-non-strict', action='store_false',
             help='allow incompatible keys when loading model states',
             dest='load_state_strict')
 
-    parser.add_argument('--batches', default=1, type=int,
+    parser.add_argument('--batches', type=int, required=True,
             help='mini-batch size, per GPU in training or in total in testing')
-    parser.add_argument('--loader-workers', type=int,
-            help='number of data loading workers, per GPU in training or '
-            'in total in testing. '
-            'Default is the batch size or 0 for batch size 1')
+    parser.add_argument('--loader-workers', default=-8, type=int,
+            help='number of subprocesses per data loader. '
+            '0 to disable multiprocessing; '
+            'negative number to multiply by the batch size')
 
-    parser.add_argument('--cache', action='store_true',
-            help='enable LRU cache of input and target fields to reduce I/O')
-    parser.add_argument('--cache-maxsize', type=int,
-            help='maximum pairs of fields in cache, unlimited by default. '
-            'This only applies to training if not None, '
-            'in which case the testing cache maxsize is 1')
     parser.add_argument('--callback-at', type=lambda s: os.path.abspath(s),
             help='directory of custorm code defining callbacks for models, '
             'norms, criteria, and optimizers. Disabled if not set. '
@@ -93,6 +95,10 @@ def add_train_args(parser):
             help='comma-sep. list of glob patterns for validation target data')
     parser.add_argument('--augment', action='store_true',
             help='enable data augmentation of axis flipping and permutation')
+    parser.add_argument('--aug-shift', type=int,
+            help='data augmentation by shifting [0, aug_shift) pixels, '
+            'useful for models that treat neighboring pixels differently, '
+            'e.g. with strided convolutions')
     parser.add_argument('--aug-add', type=float,
             help='additive data augmentation, (normal) std, '
             'same factor for all fields')
@@ -106,8 +112,6 @@ def add_train_args(parser):
             help='enable spectral normalization on the adversary model')
     parser.add_argument('--adv-criterion', default='BCEWithLogitsLoss', type=str,
             help='adversarial criterion from torch.nn')
-    parser.add_argument('--min-reduction', action='store_true',
-            help='enable minimum reduction in adversarial criterion')
     parser.add_argument('--cgan', action='store_true',
             help='enable conditional GAN')
     parser.add_argument('--adv-start', default=0, type=int,
@@ -124,7 +128,7 @@ def add_train_args(parser):
 
     parser.add_argument('--optimizer', default='Adam', type=str,
             help='optimizer from torch.optim')
-    parser.add_argument('--lr', default=0.001, type=float,
+    parser.add_argument('--lr', type=float, required=True,
             help='initial learning rate')
 #    parser.add_argument('--momentum', default=0.9, type=float,
 #            help='momentum')
@@ -143,8 +147,6 @@ def add_train_args(parser):
     parser.add_argument('--seed', default=42, type=int,
             help='seed for initializing training')
 
-    parser.add_argument('--div-data', action='store_true',
-            help='enable data division among GPUs, useful with cache')
     parser.add_argument('--dist-backend', default='nccl', type=str,
             choices=['gloo', 'nccl'], help='distributed backend')
     parser.add_argument('--log-interval', default=100, type=int,
@@ -175,21 +177,8 @@ def str_list(s):
 
 
 def set_common_args(args):
-    if args.loader_workers is None:
-        args.loader_workers = 0
-        if args.batches > 1:
-            args.loader_workers = args.batches
-
-    if not args.cache and args.cache_maxsize is not None:
-        args.cache_maxsize = None
-        warnings.warn('Resetting cache maxsize given cache is disabled',
-                      RuntimeWarning)
-    if (args.cache and args.cache_maxsize is not None
-            and args.cache_maxsize < 1):
-        args.cache = False
-        args.cache_maxsize = None
-        warnings.warn('Disabling cache given cache maxsize < 1',
-                      RuntimeWarning)
+    if args.loader_workers < 0:
+        args.loader_workers *= - args.batches
 
 
 def set_train_args(args):
@@ -205,6 +194,11 @@ def set_train_args(args):
             args.adv_lr = args.lr
         if args.adv_weight_decay is None:
             args.adv_weight_decay = args.weight_decay
+
+    if args.cgan and not args.adv:
+        args.cgan =False
+        warnings.warn('Disabling cgan given adversary is disabled',
+                      RuntimeWarning)
 
 
 def set_test_args(args):
