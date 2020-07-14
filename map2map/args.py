@@ -70,10 +70,10 @@ def add_common_args(parser):
 
     parser.add_argument('--batches', type=int, required=True,
             help='mini-batch size, per GPU in training or in total in testing')
-    parser.add_argument('--loader-workers', type=int,
-            help='number of data loading workers, per GPU in training or '
-            'in total in testing. Default is 0 for single batch, '
-            'otherwise same as the batch size')
+    parser.add_argument('--loader-workers', default=-8, type=int,
+            help='number of subprocesses per data loader. '
+            '0 to disable multiprocessing; '
+            'negative number to multiply by the batch size')
 
     parser.add_argument('--callback-at', type=lambda s: os.path.abspath(s),
             help='directory of custorm code defining callbacks for models, '
@@ -177,10 +177,8 @@ def str_list(s):
 
 
 def set_common_args(args):
-    if args.loader_workers is None:
-        args.loader_workers = 0
-        if args.batches > 1:
-            args.loader_workers = args.batches
+    if args.loader_workers < 0:
+        args.loader_workers *= - args.batches
 
 
 def set_train_args(args):
