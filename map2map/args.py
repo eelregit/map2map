@@ -106,26 +106,6 @@ def add_train_args(parser):
             help='multiplicative data augmentation, (log-normal) std, '
             'same factor for all fields')
 
-    parser.add_argument('--adv-model', type=str,
-            help='enable adversary model from .models')
-    parser.add_argument('--adv-model-spectral-norm', action='store_true',
-            help='enable spectral normalization on the adversary model')
-    parser.add_argument('--adv-criterion', default='BCEWithLogitsLoss', type=str,
-            help='adversarial criterion from torch.nn')
-    parser.add_argument('--cgan', action='store_true',
-            help='enable conditional GAN')
-    parser.add_argument('--adv-start', default=0, type=int,
-            help='epoch to start adversarial training')
-    parser.add_argument('--adv-label-smoothing', default=1, type=float,
-            help='label of real samples for the adversary model, '
-            'e.g. 0.9 for label smoothing and 1 to disable')
-    parser.add_argument('--loss-fraction', default=0.5, type=float,
-            help='final fraction of loss (vs adv-loss)')
-    parser.add_argument('--instance-noise', default=0, type=float,
-            help='noise added to the adversary inputs to stabilize training')
-    parser.add_argument('--instance-noise-batches', default=1e4, type=float,
-            help='noise annealing duration')
-
     parser.add_argument('--optimizer', default='Adam', type=str,
             help='optimizer from torch.optim')
     parser.add_argument('--lr', type=float, required=True,
@@ -134,10 +114,6 @@ def add_train_args(parser):
 #            help='momentum')
     parser.add_argument('--weight-decay', default=0, type=float,
             help='weight decay')
-    parser.add_argument('--adv-lr', type=float,
-            help='initial adversary learning rate')
-    parser.add_argument('--adv-weight-decay', type=float,
-            help='adversary weight decay')
     parser.add_argument('--reduce-lr-on-plateau', action='store_true',
             help='Enable ReduceLROnPlateau learning rate scheduler')
     parser.add_argument('--init-weight-std', type=float,
@@ -186,19 +162,6 @@ def set_train_args(args):
 
     args.val = args.val_in_patterns is not None and \
             args.val_tgt_patterns is not None
-
-    args.adv = args.adv_model is not None
-
-    if args.adv:
-        if args.adv_lr is None:
-            args.adv_lr = args.lr
-        if args.adv_weight_decay is None:
-            args.adv_weight_decay = args.weight_decay
-
-    if args.cgan and not args.adv:
-        args.cgan =False
-        warnings.warn('Disabling cgan given adversary is disabled',
-                      RuntimeWarning)
 
 
 def set_test_args(args):
