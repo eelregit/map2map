@@ -70,7 +70,7 @@ def add_common_args(parser):
 
     parser.add_argument('--batches', type=int, required=True,
             help='mini-batch size, per GPU in training or in total in testing')
-    parser.add_argument('--loader-workers', default=-8, type=int,
+    parser.add_argument('--loader-workers', default=-2, type=int,
             help='number of subprocesses per data loader. '
             '0 to disable multiprocessing; '
             'negative number to multiply by the batch size')
