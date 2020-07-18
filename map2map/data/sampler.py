@@ -1,6 +1,3 @@
-"""
-Deprecated for use of memmap in place of cache
-"""
 from itertools import chain
 import torch
 from torch.utils.data import Sampler
