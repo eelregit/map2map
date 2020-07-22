@@ -70,7 +70,7 @@ def add_common_args(parser):
 
     parser.add_argument('--batches', type=int, required=True,
             help='mini-batch size, per GPU in training or in total in testing')
-    parser.add_argument('--loader-workers', default=-2, type=int,
+    parser.add_argument('--loader-workers', default=-8, type=int,
             help='number of subprocesses per data loader. '
             '0 to disable multiprocessing; '
             'negative number to multiply by the batch size')
@@ -147,6 +147,14 @@ def add_train_args(parser):
     parser.add_argument('--seed', default=42, type=int,
             help='seed for initializing training')
 
+    parser.add_argument('--div-data', action='store_true',
+            help='enable data division among GPUs for better page caching. '
+            'Only relevant if there are multiple crops in each field')
+    parser.add_argument('--div-shuffle-dist', default=1, type=float,
+            help='distance to further shuffle within each data division. '
+            'Only relevant if there are multiple crops in each field. '
+            'The order of each sample is randomly displaced by this value. '
+            'Change this to balance cache locality and stochasticity')
     parser.add_argument('--dist-backend', default='nccl', type=str,
             choices=['gloo', 'nccl'], help='distributed backend')
     parser.add_argument('--log-interval', default=100, type=int,

@@ -1,2 +1,2 @@
 from .fields import FieldDataset
-from .sampler import GroupedRandomSampler
+from .sampler import DistFieldSampler

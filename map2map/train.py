@@ -10,11 +10,10 @@ import torch.optim as optim
 import torch.distributed as dist
 from torch.multiprocessing import spawn
 from torch.nn.parallel import DistributedDataParallel
-from torch.utils.data.distributed import DistributedSampler
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 
-from .data import FieldDataset, GroupedRandomSampler
+from .data import FieldDataset, DistFieldSampler
 from .data.figures import plt_slices
 from . import models
 from .models import (narrow_cast, resample,
@@ -75,7 +74,9 @@ def gpu_worker(local_rank, node, args):
         pad=args.pad,
         scale_factor=args.scale_factor,
     )
-    train_sampler = DistributedSampler(train_dataset, shuffle=True)
+    train_sampler = DistFieldSampler(train_dataset, shuffle=True,
+                                     div_data=args.div_data,
+                                     div_shuffle_dist=args.div_shuffle_dist)
     train_loader = DataLoader(
         train_dataset,
         batch_size=args.batches,
@@ -103,7 +104,9 @@ def gpu_worker(local_rank, node, args):
             pad=args.pad,
             scale_factor=args.scale_factor,
         )
-        val_sampler = DistributedSampler(val_dataset, shuffle=False)
+        val_sampler = DistFieldSampler(val_dataset, shuffle=False,
+                                       div_data=args.div_data,
+                                       div_shuffle_dist=args.div_shuffle_dist)
         val_loader = DataLoader(
             val_dataset,
             batch_size=args.batches,

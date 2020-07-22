@@ -119,14 +119,16 @@ class FieldDataset(Dataset):
                 'only support integer upsampling'
         self.scale_factor = scale_factor
 
+        self.nsample = self.nfile * self.ncrop
+
     def __len__(self):
-        return self.nfile * self.ncrop
+        return self.nsample
 
     def __getitem__(self, idx):
         ifile, icrop = divmod(idx, self.ncrop)
 
-        in_fields = [np.load(f, mmap_mode='r') for f in self.in_files[ifile]]
-        tgt_fields = [np.load(f, mmap_mode='r') for f in self.tgt_files[ifile]]
+        in_fields = [np.load(f) for f in self.in_files[ifile]]
+        tgt_fields = [np.load(f) for f in self.tgt_files[ifile]]
 
         anchor = self.anchors[icrop]
 
@@ -184,7 +186,6 @@ def crop(fields, anchor, crop, pad, size):
             ind.append(i)
 
         x = x[tuple(ind)]
-        x.setflags(write=True)  # workaround numpy bug before 1.18
 
         new_fields.append(x)
 
