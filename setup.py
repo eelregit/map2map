@@ -1,5 +1,4 @@
-from setuptools import setup
-from setuptools import find_packages
+from setuptools import setup, find_packages
 
 setup(
     name='map2map',
@@ -8,6 +7,9 @@ setup(
     author='Yin Li et al.',
     author_email='eelregit@gmail.com',
     packages=find_packages(),
+    scripts=[
+        'scripts/m2m.py',
+    ],
     python_requires='>=3.6',
     install_requires=[
         'torch>=1.2',
@@ -17,7 +19,4 @@ setup(
     extras_require={
         "visualization":  ["tensorboard"],
     },
-    scripts=[
-        'scripts/m2m.py',
-    ]
 )

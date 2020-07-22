@@ -10,11 +10,10 @@ import torch.optim as optim
 import torch.distributed as dist
 from torch.multiprocessing import spawn
 from torch.nn.parallel import DistributedDataParallel
-from torch.utils.data.distributed import DistributedSampler
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 
-from .data import FieldDataset, GroupedRandomSampler
+from .data import FieldDataset, DistFieldSampler
 from .data.figures import plt_slices
 from . import models
 from .models import narrow_cast, resample, Lag2Eul
@@ -72,7 +71,9 @@ def gpu_worker(local_rank, node, args):
         pad=args.pad,
         scale_factor=args.scale_factor,
     )
-    train_sampler = DistributedSampler(train_dataset, shuffle=True)
+    train_sampler = DistFieldSampler(train_dataset, shuffle=True,
+                                     div_data=args.div_data,
+                                     div_shuffle_dist=args.div_shuffle_dist)
     train_loader = DataLoader(
         train_dataset,
         batch_size=args.batches,
@@ -100,7 +101,9 @@ def gpu_worker(local_rank, node, args):
             pad=args.pad,
             scale_factor=args.scale_factor,
         )
-        val_sampler = DistributedSampler(val_dataset, shuffle=False)
+        val_sampler = DistFieldSampler(val_dataset, shuffle=False,
+                                       div_data=args.div_data,
+                                       div_shuffle_dist=args.div_shuffle_dist)
         val_loader = DataLoader(
             val_dataset,
             batch_size=args.batches,
@@ -297,9 +300,12 @@ def train(epoch, loader, model, lag2eul, criterion,
             eul_loss /= world_size
             if rank == 0:
                 logger.add_scalar('loss/batch/train/lag', lag_loss.item(),
-                        global_step=batch)
+                                  global_step=batch)
                 logger.add_scalar('loss/batch/train/eul', eul_loss.item(),
-                        global_step=batch)
+                                  global_step=batch)
+                logger.add_scalar('loss/batch/train/lxe',
+                                  lag_loss.item() * eul_loss.item(),
+                                  global_step=batch)
 
                 logger.add_scalar('grad/lag/first', lag_grads[0],
                                   global_step=batch)
@@ -314,9 +320,11 @@ def train(epoch, loader, model, lag2eul, criterion,
     epoch_loss /= len(loader) * world_size
     if rank == 0:
         logger.add_scalar('loss/epoch/train/lag', epoch_loss[0],
-                global_step=epoch+1)
+                          global_step=epoch+1)
         logger.add_scalar('loss/epoch/train/eul', epoch_loss[1],
-                global_step=epoch+1)
+                          global_step=epoch+1)
+        logger.add_scalar('loss/epoch/train/lxe', epoch_loss.prod(),
+                          global_step=epoch+1)
 
         logger.add_figure('fig/epoch/train', plt_slices(
                 input[-1], lag_out[-1], lag_tgt[-1], lag_out[-1] - lag_tgt[-1],
@@ -362,9 +370,11 @@ def validate(epoch, loader, model, lag2eul, criterion, logger, device, args):
     epoch_loss /= len(loader) * world_size
     if rank == 0:
         logger.add_scalar('loss/epoch/val/lag', epoch_loss[0],
-                global_step=epoch+1)
+                          global_step=epoch+1)
         logger.add_scalar('loss/epoch/val/eul', epoch_loss[1],
-                global_step=epoch+1)
+                          global_step=epoch+1)
+        logger.add_scalar('loss/epoch/val/lxe', epoch_loss.prod(),
+                          global_step=epoch+1)
 
         logger.add_figure('fig/epoch/val', plt_slices(
                 input[-1], lag_out[-1], lag_tgt[-1], lag_out[-1] - lag_tgt[-1],
