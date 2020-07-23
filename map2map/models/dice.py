@@ -2,7 +2,7 @@ import torch.nn as nn
 
 
 class DiceLoss(nn.Module):
-    def __init__(self, eps=0.0):
+    def __init__(self, eps=0.):
         super().__init__()
         self.eps = eps
 
@@ -10,7 +10,7 @@ class DiceLoss(nn.Module):
         return dice_loss(input, target, self.eps)
 
 
-def dice_loss(input, target, eps=0.0):
+def dice_loss(input, target, eps=0.):
     input = input.view(-1)
     target = target.view(-1)
 

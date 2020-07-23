@@ -7,11 +7,11 @@ def main():
 
     args = get_args()
 
-    if args.mode == "train":
+    if args.mode == 'train':
         train.node_worker(args)
-    elif args.mode == "test":
+    elif args.mode == 'test':
         test.test(args)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()

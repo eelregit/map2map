@@ -9,7 +9,6 @@ class GroupedRandomSampler(Sampler):
 
     This behaves like a simple random sampler by default
     """
-
     def __init__(self, data_source, group_size=None):
         self.data_source = data_source
         self.sample_size = len(data_source)
@@ -23,14 +22,10 @@ class GroupedRandomSampler(Sampler):
         sizes = [self.group_size] * (len(starts) - 1)
         sizes.append(self.sample_size - starts[-1])
 
-        return iter(
-            chain(
-                *[
-                    (start + torch.randperm(size)).tolist()
-                    for start, size in zip(starts, sizes)
-                ]
-            )
-        )
+        return iter(chain(*[
+            (start + torch.randperm(size)).tolist()
+            for start, size in zip(starts, sizes)
+        ]))
 
     def __len__(self):
         return self.sample_size

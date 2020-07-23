@@ -38,38 +38,23 @@ class FieldDataset(Dataset):
     fields are cached in different GPU processes.
     This saves CPU RAM but limits stochasticity.
     """
-
-    def __init__(
-        self,
-        in_patterns,
-        tgt_patterns,
-        in_norms=None,
-        tgt_norms=None,
-        callback_at=None,
-        augment=False,
-        aug_add=None,
-        aug_mul=None,
-        crop=None,
-        pad=0,
-        scale_factor=1,
-        cache=False,
-        cache_maxsize=None,
-        div_data=False,
-        rank=None,
-        world_size=None,
-    ):
+    def __init__(self, in_patterns, tgt_patterns,
+                 in_norms=None, tgt_norms=None, callback_at=None,
+                 augment=False, aug_add=None, aug_mul=None,
+                 crop=None, pad=0, scale_factor=1,
+                 cache=False, cache_maxsize=None, div_data=False,
+                 rank=None, world_size=None):
         in_file_lists = [sorted(glob(p)) for p in in_patterns]
-        self.in_files = list(zip(*in_file_lists))
+        self.in_files = list(zip(* in_file_lists))
 
         tgt_file_lists = [sorted(glob(p)) for p in tgt_patterns]
-        self.tgt_files = list(zip(*tgt_file_lists))
+        self.tgt_files = list(zip(* tgt_file_lists))
 
-        assert len(self.in_files) == len(
-            self.tgt_files
-        ), "number of input and target fields do not match"
+        assert len(self.in_files) == len(self.tgt_files), \
+                'number of input and target fields do not match'
         self.nfile = len(self.in_files)
 
-        assert self.nfile > 0, "file not found"
+        assert self.nfile > 0, 'file not found'
 
         self.in_chan = [np.load(f).shape[0] for f in self.in_files[0]]
         self.tgt_chan = [np.load(f).shape[0] for f in self.tgt_files[0]]
@@ -79,26 +64,22 @@ class FieldDataset(Dataset):
         self.ndim = len(self.size)
 
         if in_norms is not None:
-            assert len(in_patterns) == len(
-                in_norms
-            ), "numbers of input normalization functions and fields do not match"
-            in_norms = [
-                import_attr(norm, norms.__name__, callback_at) for norm in in_norms
-            ]
+            assert len(in_patterns) == len(in_norms), \
+                    'numbers of input normalization functions and fields do not match'
+            in_norms = [import_attr(norm, norms.__name__, callback_at)
+                        for norm in in_norms]
         self.in_norms = in_norms
 
         if tgt_norms is not None:
-            assert len(tgt_patterns) == len(
-                tgt_norms
-            ), "numbers of target normalization functions and fields do not match"
-            tgt_norms = [
-                import_attr(norm, norms.__name__, callback_at) for norm in tgt_norms
-            ]
+            assert len(tgt_patterns) == len(tgt_norms), \
+                    'numbers of target normalization functions and fields do not match'
+            tgt_norms = [import_attr(norm, norms.__name__, callback_at)
+                         for norm in tgt_norms]
         self.tgt_norms = tgt_norms
 
         self.augment = augment
         if self.ndim == 1 and self.augment:
-            raise ValueError("cannot augment 1D fields")
+            raise ValueError('cannot augment 1D fields')
         self.aug_add = aug_add
         self.aug_mul = aug_mul
 
@@ -110,12 +91,11 @@ class FieldDataset(Dataset):
             self.reps = self.size // self.crop
         self.ncrop = int(np.prod(self.reps))
 
-        assert isinstance(pad, int), "only support symmetric padding for now"
+        assert isinstance(pad, int), 'only support symmetric padding for now'
         self.pad = np.broadcast_to(pad, (self.ndim, 2))
 
-        assert (
-            isinstance(scale_factor, int) and scale_factor >= 1
-        ), "only support integer upsampling"
+        assert isinstance(scale_factor, int) and scale_factor >= 1, \
+                'only support integer upsampling'
         self.scale_factor = scale_factor
 
         if cache:
@@ -125,19 +105,18 @@ class FieldDataset(Dataset):
             self.samples = []
 
             # first add full fields when num_fields > num_GPU
-            for i in range(rank, self.nfile // world_size * world_size, world_size):
-                self.samples.append(range(i * self.ncrop, (i + 1) * self.ncrop))
+            for i in range(rank, self.nfile // world_size * world_size,
+                           world_size):
+                self.samples.append(
+                    range(i * self.ncrop, (i + 1) * self.ncrop)
+                )
 
             # then split the rest into fractions of fields
             # drop the last incomplete batch of samples
             frac_start = self.nfile // world_size * world_size * self.ncrop
             frac_samples = self.nfile % world_size * self.ncrop // world_size
-            self.samples.append(
-                range(
-                    frac_start + rank * frac_samples,
-                    frac_start + (rank + 1) * frac_samples,
-                )
-            )
+            self.samples.append(range(frac_start + rank * frac_samples,
+                                      frac_start + (rank + 1) * frac_samples))
 
             self.samples = np.concatenate(self.samples)
         else:
@@ -162,12 +141,9 @@ class FieldDataset(Dataset):
         start = np.unravel_index(idx % self.ncrop, self.reps) * self.crop
 
         in_fields = crop(in_fields, start, self.crop, self.pad)
-        tgt_fields = crop(
-            tgt_fields,
-            start * self.scale_factor,
-            self.crop * self.scale_factor,
-            np.zeros_like(self.pad),
-        )
+        tgt_fields = crop(tgt_fields, start * self.scale_factor,
+                          self.crop * self.scale_factor,
+                          np.zeros_like(self.pad))
 
         in_fields = [torch.from_numpy(f).to(torch.float32) for f in in_fields]
         tgt_fields = [torch.from_numpy(f).to(torch.float32) for f in tgt_fields]
@@ -205,7 +181,7 @@ def crop(fields, start, crop, pad):
     for x in fields:
         for d, (i, c, (p0, p1)) in enumerate(zip(start, crop, pad)):
             begin, end = i - p0, i + c + p1
-            x = x.take(range(begin, end), axis=1 + d, mode="wrap")
+            x = x.take(range(begin, end), axis=1 + d, mode='wrap')
 
         new_fields.append(x)
 
@@ -213,7 +189,7 @@ def crop(fields, start, crop, pad):
 
 
 def flip(fields, axes, ndim):
-    assert ndim > 1, "flipping is ambiguous for 1D scalars/vectors"
+    assert ndim > 1, 'flipping is ambiguous for 1D scalars/vectors'
 
     if axes is None:
         axes = torch.randint(2, (ndim,), dtype=torch.bool)
@@ -222,7 +198,7 @@ def flip(fields, axes, ndim):
     new_fields = []
     for x in fields:
         if x.shape[0] == ndim:  # flip vector components
-            x[axes] = -x[axes]
+            x[axes] = - x[axes]
 
         shifted_axes = (1 + axes).tolist()
         x = torch.flip(x, shifted_axes)
@@ -233,7 +209,7 @@ def flip(fields, axes, ndim):
 
 
 def perm(fields, axes, ndim):
-    assert ndim > 1, "permutation is not necessary for 1D fields"
+    assert ndim > 1, 'permutation is not necessary for 1D fields'
 
     if axes is None:
         axes = torch.randperm(ndim)

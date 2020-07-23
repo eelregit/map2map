@@ -11,7 +11,6 @@ def dis(x, undo=False):
 
     x *= dis_norm
 
-
 def vel(x, undo=False):
     z = 0  # FIXME
     vel_norm = 6 * D(z) * H(z) * f(z) / (1 + z)  # [km/s]
@@ -20,7 +19,6 @@ def vel(x, undo=False):
         vel_norm = 1 / vel_norm
 
     x *= vel_norm
-
 
 def den(x, undo=False):
     raise NotImplementedError
@@ -37,28 +35,22 @@ def D(z, Om=0.31):
     """linear growth function for flat LambdaCDM, normalized to 1 at redshift zero
     """
     OL = 1 - Om
-    a = 1 / (1 + z)
-    return (
-        a
-        * hyp2f1(1, 1 / 3, 11 / 6, -OL * a ** 3 / Om)
-        / hyp2f1(1, 1 / 3, 11 / 6, -OL / Om)
-    )
-
+    a = 1 / (1+z)
+    return a * hyp2f1(1, 1/3, 11/6, - OL * a**3 / Om) \
+             / hyp2f1(1, 1/3, 11/6, - OL / Om)
 
 def f(z, Om=0.31):
     """linear growth rate for flat LambdaCDM
     """
     OL = 1 - Om
-    a = 1 / (1 + z)
-    aa3 = OL * a ** 3 / Om
-    return 1 - 6 / 11 * aa3 * hyp2f1(2, 4 / 3, 17 / 6, -aa3) / hyp2f1(
-        1, 1 / 3, 11 / 6, -aa3
-    )
-
+    a = 1 / (1+z)
+    aa3 = OL * a**3 / Om
+    return 1 - 6/11*aa3 * hyp2f1(2, 4/3, 17/6, -aa3) \
+                        / hyp2f1(1, 1/3, 11/6, -aa3)
 
 def H(z, Om=0.31):
     """Hubble in [h km/s/Mpc] for flat LambdaCDM
     """
     OL = 1 - Om
-    a = 1 / (1 + z)
-    return 100 * np.sqrt(Om / a ** 3 + OL)
+    a = 1 / (1+z)
+    return 100 * np.sqrt(Om / a**3 + OL)

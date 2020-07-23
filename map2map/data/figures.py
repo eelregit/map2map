@@ -3,18 +3,15 @@ import warnings
 import torch
 import numpy as np
 import matplotlib
-
-matplotlib.use("Agg")
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from matplotlib.colors import Normalize, LogNorm, SymLogNorm
 from matplotlib.cm import ScalarMappable
 
 
 def fig3d(*fields, size=64, title=None, cmap=None, norm=None):
-    fields = [
-        field.detach().cpu().numpy() if isinstance(field, torch.Tensor) else field
-        for field in fields
-    ]
+    fields = [field.detach().cpu().numpy() if isinstance(field, torch.Tensor)
+            else field for field in fields]
 
     assert all(isinstance(field, np.ndarray) for field in fields)
 
@@ -28,8 +25,7 @@ def fig3d(*fields, size=64, title=None, cmap=None, norm=None):
     cbar_height = 0.3
     cbar_frac = cbar_height / (nc * im_size + cbar_height)
     fig, axes = plt.subplots(
-        nc,
-        nf,
+        nc, nf,
         squeeze=False,
         figsize=(nf * im_size, nc * im_size + cbar_height),
         dpi=100,
@@ -45,12 +41,12 @@ def fig3d(*fields, size=64, title=None, cmap=None, norm=None):
 
         if cmap is None:
             if all_non_neg:
-                cmap_ = "viridis"
+                cmap_ = 'viridis'
             elif all_non_pos:
-                warnings.warn("no implementation for all non-positive values")
+                warnings.warn('no implementation for all non-positive values')
                 cmap_ = None
             else:
-                cmap_ = "RdBu_r"
+                cmap_ = 'RdBu_r'
         else:
             cmap_ = cmap
 
@@ -64,7 +60,7 @@ def fig3d(*fields, size=64, title=None, cmap=None, norm=None):
                 else:
                     norm_ = LogNorm(vmin=quantize(0.5 * l2), vmax=quantize(2 * h2))
             elif all_non_pos:
-                warnings.warn("no implementation for all non-positive values")
+                warnings.warn('no implementation for all non-positive values')
                 norm_ = None
             else:
                 if w1 > 0.1 * w2:
@@ -77,9 +73,10 @@ def fig3d(*fields, size=64, title=None, cmap=None, norm=None):
             norm_ = norm
 
         for c in range(field.shape[0]):
-            axes[c, f].pcolormesh(field[c, 0, :size, :size], cmap=cmap_, norm=norm_)
+            axes[c, f].pcolormesh(field[c, 0, :size, :size],
+                                  cmap=cmap_, norm=norm_)
 
-            axes[c, f].set_aspect("equal")
+            axes[c, f].set_aspect('equal')
 
             axes[c, f].set_xticks([])
             axes[c, f].set_yticks([])
@@ -88,18 +85,18 @@ def fig3d(*fields, size=64, title=None, cmap=None, norm=None):
                 axes[c, f].set_title(title[f])
 
         for c in range(field.shape[0], nc):
-            axes[c, f].axis("off")
+            axes[c, f].axis('off')
 
         fig.colorbar(
             ScalarMappable(norm=norm_, cmap=cmap_),
             ax=axes[:, f],
-            orientation="horizontal",
+            orientation='horizontal',
             fraction=cbar_frac,
             pad=0,
             shrink=0.9,
             aspect=10,
         )
 
-    fig.set_constrained_layout_pads(w_pad=2 / 72, h_pad=2 / 72, wspace=0, hspace=0)
+    fig.set_constrained_layout_pads(w_pad=2/72, h_pad=2/72, wspace=0, hspace=0)
 
     return fig

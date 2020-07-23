@@ -9,15 +9,15 @@ class PyramidNet(nn.Module):
         super().__init__()
 
         self.down = nn.AvgPool3d(2, stride=2)
-        self.up = nn.Upsample(scale_factor=2, mode="nearest")
+        self.up = nn.Upsample(scale_factor=2, mode='nearest')
 
-        self.conv_l0 = ResBlock(in_chan, 64, seq="CAC")
-        self.conv_l1 = ResBlock(64, seq="CBAC")
+        self.conv_l0 = ResBlock(in_chan, 64, seq='CAC')
+        self.conv_l1 = ResBlock(64, seq='CBAC')
 
-        self.conv_c = ResBlock(64, seq="CBAC")
+        self.conv_c = ResBlock(64, seq='CBAC')
 
-        self.conv_r1 = ResBlock(128, 64, seq="CBAC")
-        self.conv_r0 = ResBlock(128, out_chan, seq="CAC")
+        self.conv_r1 = ResBlock(128, 64, seq='CBAC')
+        self.conv_r0 = ResBlock(128, out_chan, seq='CAC')
 
     def forward(self, x):
         y0 = self.conv_l0(x)
