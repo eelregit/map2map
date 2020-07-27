@@ -366,15 +366,19 @@ def train(epoch, loader, model, criterion, optimizer, scheduler,
             loss /= world_size
             if rank == 0:
                 logger.add_scalar('loss/batch/train', loss.item(),
-                        global_step=batch)
+                                  global_step=batch)
                 if args.adv and epoch >= args.adv_start:
-                    logger.add_scalar('loss/batch/train/adv/G',
-                            loss_adv.item(), global_step=batch)
-                    logger.add_scalars('loss/batch/train/adv/D', {
+                    logger.add_scalar('loss/batch/train/adv/G', loss_adv.item(),
+                                      global_step=batch)
+                    logger.add_scalars(
+                        'loss/batch/train/adv/D',
+                        {
                             'total': adv_loss.item(),
                             'fake': adv_loss_fake.item(),
                             'real': adv_loss_real.item(),
-                        }, global_step=batch)
+                        },
+                        global_step=batch,
+                    )
 
                 # gradients of the weights of the first and the last layer
                 grads = list(p.grad for n, p in model.named_parameters()
@@ -395,32 +399,36 @@ def train(epoch, loader, model, criterion, optimizer, scheduler,
 
                 if args.adv and epoch >= args.adv_start and noise_std > 0:
                     logger.add_scalar('instance_noise', noise_std,
-                            global_step=batch)
+                                      global_step=batch)
 
     dist.all_reduce(epoch_loss)
     epoch_loss /= len(loader) * world_size
     if rank == 0:
         logger.add_scalar('loss/epoch/train', epoch_loss[0],
-                global_step=epoch+1)
+                          global_step=epoch+1)
         if args.adv and epoch >= args.adv_start:
             logger.add_scalar('loss/epoch/train/adv/G', epoch_loss[1],
-                    global_step=epoch+1)
-            logger.add_scalars('loss/epoch/train/adv/D', {
+                              global_step=epoch+1)
+            logger.add_scalars(
+                'loss/epoch/train/adv/D',
+                {
                     'total': epoch_loss[2],
                     'fake': epoch_loss[3],
                     'real': epoch_loss[4],
-                }, global_step=epoch+1)
+                },
+                global_step=epoch+1,
+            )
 
         skip_chan = 0
         if args.adv and epoch >= args.adv_start and args.cgan:
             skip_chan = sum(args.in_chan)
-        logger.add_figure('fig/epoch/train', plt_slices(
-                input[-1],
-                output[-1, skip_chan:],
-                target[-1, skip_chan:],
-                output[-1, skip_chan:] - target[-1, skip_chan:],
-                title=['in', 'out', 'tgt', 'out - tgt'],
-            ), global_step=epoch+1)
+        fig = plt_slices(
+            input[-1], output[-1, skip_chan:], target[-1, skip_chan:],
+            output[-1, skip_chan:] - target[-1, skip_chan:],
+            title=['in', 'out', 'tgt', 'out - tgt'],
+        )
+        logger.add_figure('fig/epoch/train', fig, global_step=epoch+1)
+        fig.clf()
 
     return epoch_loss
 
@@ -475,26 +483,30 @@ def validate(epoch, loader, model, criterion, adv_model, adv_criterion,
     epoch_loss /= len(loader) * world_size
     if rank == 0:
         logger.add_scalar('loss/epoch/val', epoch_loss[0],
-                global_step=epoch+1)
+                          global_step=epoch+1)
         if args.adv and epoch >= args.adv_start:
             logger.add_scalar('loss/epoch/val/adv/G', epoch_loss[1],
-                    global_step=epoch+1)
-            logger.add_scalars('loss/epoch/val/adv/D', {
+                              global_step=epoch+1)
+            logger.add_scalars(
+                'loss/epoch/val/adv/D',
+                {
                     'total': epoch_loss[2],
                     'fake': epoch_loss[3],
                     'real': epoch_loss[4],
-                }, global_step=epoch+1)
+                },
+                global_step=epoch+1,
+            )
 
         skip_chan = 0
         if args.adv and epoch >= args.adv_start and args.cgan:
             skip_chan = sum(args.in_chan)
-        logger.add_figure('fig/epoch/val', plt_slices(
-                input[-1],
-                output[-1, skip_chan:],
-                target[-1, skip_chan:],
-                output[-1, skip_chan:] - target[-1, skip_chan:],
-                title=['in', 'out', 'tgt', 'out - tgt'],
-            ), global_step=epoch+1)
+        fig = plt_slices(
+            input[-1], output[-1, skip_chan:], target[-1, skip_chan:],
+            output[-1, skip_chan:] - target[-1, skip_chan:],
+            title=['in', 'out', 'tgt', 'out - tgt'],
+        )
+        logger.add_figure('fig/epoch/val', fig, global_step=epoch+1)
+        fig.clf()
 
     return epoch_loss
 
