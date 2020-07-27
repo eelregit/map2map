@@ -136,12 +136,10 @@ def gpu_worker(local_rank, node, args):
     optimizer = optimizer(
         model.parameters(),
         lr=args.lr,
-        #momentum=args.momentum,
-        betas=(0.5, 0.999),
-        weight_decay=args.weight_decay,
+        **args.optimizer_args,
     )
-    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer,
-            factor=0.1, patience=10, verbose=True)
+    scheduler = optim.lr_scheduler.ReduceLROnPlateau(
+        optimizer, **args.scheduler_args)
 
     adv_model = adv_criterion = adv_optimizer = adv_scheduler = None
     if args.adv:
@@ -164,11 +162,10 @@ def gpu_worker(local_rank, node, args):
         adv_optimizer = adv_optimizer(
             adv_model.parameters(),
             lr=args.adv_lr,
-            betas=(0.5, 0.999),
-            weight_decay=args.adv_weight_decay,
+            **args.adv_optimizer_args,
         )
-        adv_scheduler = optim.lr_scheduler.ReduceLROnPlateau(adv_optimizer,
-            factor=0.1, patience=10, verbose=True)
+        adv_scheduler = optim.lr_scheduler.ReduceLROnPlateau(
+            adv_optimizer, **args.scheduler_args)
 
     if (args.load_state == ckpt_link and not os.path.isfile(ckpt_link)
             or not args.load_state):
