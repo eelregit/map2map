@@ -135,20 +135,17 @@ def gpu_worker(local_rank, node, args):
     lag_optimizer = optimizer(
         model.parameters(),
         lr=args.lr,
-        #momentum=args.momentum,
-        betas=(0.9, 0.999),
-        weight_decay=args.weight_decay,
+        **args.optimizer_args,
     )
     eul_optimizer = optimizer(
         model.parameters(),
         lr=args.lr,
-        betas=(0.9, 0.999),
-        weight_decay=args.weight_decay,
+        **args.optimizer_args,
     )
-    lag_scheduler = optim.lr_scheduler.ReduceLROnPlateau(lag_optimizer,
-            factor=0.1, patience=10, verbose=True)
-    eul_scheduler = optim.lr_scheduler.ReduceLROnPlateau(eul_optimizer,
-            factor=0.1, patience=10, verbose=True)
+    lag_scheduler = optim.lr_scheduler.ReduceLROnPlateau(
+        lag_optimizer, **args.scheduler_args)
+    eul_scheduler = optim.lr_scheduler.ReduceLROnPlateau(
+        eul_optimizer, **args.scheduler_args)
 
     if (args.load_state == ckpt_link and not os.path.isfile(ckpt_link)
             or not args.load_state):
