@@ -330,12 +330,14 @@ def train(epoch, loader, model, lag2eul, criterion,
         logger.add_scalar('loss/epoch/train/lxe', epoch_loss.prod(),
                           global_step=epoch+1)
 
-        logger.add_figure('fig/epoch/train', plt_slices(
-                input[-1], lag_out[-1], lag_tgt[-1], lag_out[-1] - lag_tgt[-1],
-                           eul_out[-1], eul_tgt[-1], eul_out[-1] - eul_tgt[-1],
-                title=['in', 'lag_out', 'lag_tgt', 'lag_out - lag_tgt',
-                             'eul_out', 'eul_tgt', 'eul_out - eul_tgt'],
-            ), global_step=epoch+1)
+        fig = plt_slices(
+            input[-1], lag_out[-1], lag_tgt[-1], lag_out[-1] - lag_tgt[-1],
+                       eul_out[-1], eul_tgt[-1], eul_out[-1] - eul_tgt[-1],
+            title=['in', 'lag_out', 'lag_tgt', 'lag_out - lag_tgt',
+                         'eul_out', 'eul_tgt', 'eul_out - eul_tgt'],
+        )
+        logger.add_figure('fig/epoch/train', fig, global_step=epoch+1)
+        fig.clf()
 
     return epoch_loss
 
@@ -380,12 +382,14 @@ def validate(epoch, loader, model, lag2eul, criterion, logger, device, args):
         logger.add_scalar('loss/epoch/val/lxe', epoch_loss.prod(),
                           global_step=epoch+1)
 
-        logger.add_figure('fig/epoch/val', plt_slices(
-                input[-1], lag_out[-1], lag_tgt[-1], lag_out[-1] - lag_tgt[-1],
-                           eul_out[-1], eul_tgt[-1], eul_out[-1] - eul_tgt[-1],
-                title=['in', 'lag_out', 'lag_tgt', 'lag_out - lag_tgt',
-                             'eul_out', 'eul_tgt', 'eul_out - eul_tgt'],
-            ), global_step=epoch+1)
+        fig = plt_slices(
+            input[-1], lag_out[-1], lag_tgt[-1], lag_out[-1] - lag_tgt[-1],
+                       eul_out[-1], eul_tgt[-1], eul_out[-1] - eul_tgt[-1],
+            title=['in', 'lag_out', 'lag_tgt', 'lag_out - lag_tgt',
+                         'eul_out', 'eul_tgt', 'eul_out - eul_tgt'],
+        )
+        logger.add_figure('fig/epoch/val', fig, global_step=epoch+1)
+        fig.clf()
 
     return epoch_loss
 
