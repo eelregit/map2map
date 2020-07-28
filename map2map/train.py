@@ -242,7 +242,7 @@ def gpu_worker(local_rank, node, args):
             val_loss = validate(epoch, val_loader,
                 model, criterion, adv_model, adv_criterion,
                 logger, device, args)
-            epoch_loss = val_loss
+            #epoch_loss = val_loss
 
         if args.reduce_lr_on_plateau and epoch >= args.adv_start:
             scheduler.step(epoch_loss[0])
