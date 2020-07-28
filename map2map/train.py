@@ -515,6 +515,7 @@ def dist_init(rank, args):
         addr = socket.gethostname()
 
         with socket.socket() as s:
+            s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             s.bind((addr, 0))
             _, port = s.getsockname()
 
