@@ -207,7 +207,7 @@ def gpu_worker(local_rank, node, args):
         if args.val:
             val_loss = validate(epoch, val_loader, model, lag2eul, criterion,
                 logger, device, args)
-            epoch_loss = val_loss
+            #epoch_loss = val_loss
 
         if args.reduce_lr_on_plateau:
             lag_scheduler.step(epoch_loss[0])
