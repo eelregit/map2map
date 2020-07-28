@@ -12,6 +12,8 @@ from matplotlib.cm import ScalarMappable
 def plt_slices(*fields, size=64, title=None, cmap=None, norm=None):
     """Plot slices of fields of more than 2 spatial dimensions.
     """
+    plt.close('all')
+
     fields = [field.detach().cpu().numpy() if isinstance(field, torch.Tensor)
             else field for field in fields]
 
