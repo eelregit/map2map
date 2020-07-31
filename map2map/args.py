@@ -111,7 +111,7 @@ def add_train_args(parser):
             help='optimizer from torch.optim')
     parser.add_argument('--lr', type=float, required=True,
             help='initial learning rate')
-    parser.add_argument('--optimizer-args', type=json.loads,
+    parser.add_argument('--optimizer-args', default='{}', type=json.loads,
             help='optimizer arguments in addition to the learning rate, '
             'e.g. --optimizer-args \'{"betas": [0.5, 0.9]}\'')
     parser.add_argument('--reduce-lr-on-plateau', action='store_true',
