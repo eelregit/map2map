@@ -203,8 +203,8 @@ def set_train_args(args):
     if args.adv:
         if args.adv_lr is None:
             args.adv_lr = args.lr
-        if args.adv_weight_decay is None:
-            args.adv_weight_decay = args.weight_decay
+        if args.adv_optimizer_args is None:
+            args.adv_optimizer_args = args.optimizer_args
 
     if args.cgan and not args.adv:
         args.cgan =False

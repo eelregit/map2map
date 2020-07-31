@@ -340,6 +340,7 @@ def train(epoch, loader, model, criterion, optimizer, scheduler,
             adv_optimizer.zero_grad()
             adv_loss.backward()
             adv_optimizer.step()
+            adv_grads = get_grads(adv_model)
 
             # generator adversarial loss
             set_requires_grad(adv_model, False)
@@ -356,6 +357,7 @@ def train(epoch, loader, model, criterion, optimizer, scheduler,
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
+        grads = get_grads(model)
 
         batch = epoch * len(loader) + i + 1
         if batch % args.log_interval == 0:
@@ -377,22 +379,13 @@ def train(epoch, loader, model, criterion, optimizer, scheduler,
                         global_step=batch,
                     )
 
-                # gradients of the weights of the first and the last layer
-                grads = list(p.grad for n, p in model.named_parameters()
-                        if '.weight' in n)
-                grads = [grads[0], grads[-1]]
-                grads = [g.detach().norm().item() for g in grads]
                 logger.add_scalar('grad/first', grads[0], global_step=batch)
                 logger.add_scalar('grad/last', grads[-1], global_step=batch)
                 if args.adv and epoch >= args.adv_start:
-                    grads = list(p.grad for n, p in adv_model.named_parameters()
-                            if '.weight' in n)
-                    grads = [grads[0], grads[-1]]
-                    grads = [g.detach().norm().item() for g in grads]
-                    logger.add_scalars('grad/adv/first', grads[0],
-                                       global_step=batch)
-                    logger.add_scalars('grad/adv/last', grads[-1],
-                                       global_step=batch)
+                    logger.add_scalar('grad/adv/first', adv_grads[0],
+                                      global_step=batch)
+                    logger.add_scalar('grad/adv/last', adv_grads[-1],
+                                      global_step=batch)
 
                 if args.adv and epoch >= args.adv_start and noise_std > 0:
                     logger.add_scalar('instance_noise', noise_std,
@@ -546,3 +539,13 @@ def dist_init(rank, args):
 def set_requires_grad(module, requires_grad=False):
     for param in module.parameters():
         param.requires_grad = requires_grad
+
+
+def get_grads(model):
+    """gradients of the weights of the first and the last layer
+    """
+    grads = list(p.grad for n, p in model.named_parameters()
+                 if '.weight' in n)
+    grads = [grads[0], grads[-1]]
+    grads = [g.detach().norm().item() for g in grads]
+    return grads
