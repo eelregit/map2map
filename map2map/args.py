@@ -128,11 +128,15 @@ def add_train_args(parser):
 
     parser.add_argument('--div-data', action='store_true',
             help='enable data division among GPUs for better page caching. '
+            'Data division is shuffled every epoch. '
             'Only relevant if there are multiple crops in each field')
     parser.add_argument('--div-shuffle-dist', default=1, type=float,
-            help='distance to further shuffle within each data division. '
-            'Only relevant if there are multiple crops in each field. '
+            help='distance to further shuffle cropped samples relative to '
+            'their fields, to be used with --div-data. '
+            'Only relevant if there are multiple crops in each file. '
             'The order of each sample is randomly displaced by this value. '
+            'Setting it to 0 turn off this randomization, and setting it to N '
+            'limits the shuffling within a distance of N files. '
             'Change this to balance cache locality and stochasticity')
     parser.add_argument('--dist-backend', default='nccl', type=str,
             choices=['gloo', 'nccl'], help='distributed backend')
