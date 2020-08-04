@@ -4,7 +4,7 @@ from .conv import ConvBlock
 
 
 class PatchGAN(nn.Module):
-    def __init__(self, in_chan, out_chan=1):
+    def __init__(self, in_chan, out_chan=1, **kwargs):
         super().__init__()
 
         self.convs = nn.Sequential(
@@ -21,7 +21,7 @@ class PatchGAN(nn.Module):
 class PatchGAN42(nn.Module):
     """PatchGAN similar to the one in pix2pix
     """
-    def __init__(self, in_chan, out_chan=1):
+    def __init__(self, in_chan, out_chan=1, **kwargs):
         super().__init__()
 
         self.convs = nn.Sequential(
