@@ -5,6 +5,9 @@ Neural network emulators to transform field/map data
 * [Installation](#installation)
 * [Usage](#usage)
     * [Data](#data)
+        * [Data cropping](#data-cropping)
+        * [Data padding](#data-padding)
+        * [Data loading, sampling, and page caching](#data-loading-sampling-and-page-caching)
         * [Data normalization](#data-normalization)
     * [Model](#model)
     * [Training](#training)
@@ -53,6 +56,49 @@ The total sample size is the number of input and target pairs multiplied
 by the number of cropped samples per pair.
 
 
+#### Data padding
+
+Here we are talking about two types of padding.
+We differentiate the padding during convolution from our explicit
+data padding, and refer to the former as conv-padding.
+
+Convolution preserves translational invariance, but conv-padding breaks
+it, except for the periodic conv-padding, which is not feasible at
+runtime for large 3D fields.
+Therefore we recommend convolution without conv-padding.
+By doing this, the output size will be smaller than the input size, and
+thus smaller than the target size if it equals the input size, making
+loss computation inefficient.
+
+To solve this, we can pad the input before feeding it into the model.
+The pad size should be adjusted so that the output size equals or
+approximates the target size.
+One should be able to calculate the proper pad size given the model.
+Padding works for cropped samples, or samples with periodic boundary
+condition.
+
+
+#### Data loading, sampling, and page caching
+
+The difference in speed between disks and GPUs makes training an
+IO-bound job.
+Stochastic optimization exacerbates the situation, especially for large
+3D data *with multiple crops per field*.
+In this case, we can use the `--div-data` option to divide field files
+among GPUs, so that each node only need to load part of all data if
+there are multiple nodes.
+Data division is shuffled every epoch.
+Crops within each field can be further randomized within a distance
+relative to the field, controlled by `--div-shuffle-dist`.
+Setting it to 0 turn off this randomization, and setting it to N limits
+the shuffling within a distance of N files.
+With both `--div-data` and `--div-shuffle-dist`, each GPU only need to
+work on about N files at a time, with those files kept in the Linux page
+cache.
+This is especially useful when the amount of data exceeds the CPU memory
+size.
+
+
 #### Data normalization
 
 Input and target (output) data can be normalized by functions defined in
@@ -65,6 +111,31 @@ Also see [Customization](#customization).
 Find the models in `map2map/models/`.
 Modify the existing models, or write new models somewhere and then
 follow [Customization](#customization).
+
+```python
+class Net(nn.Module):
+    def __init__(self, in_chan, out_chan, mid_chan=32, kernel_size=3,
+                 negative_slope=0.2, **kwargs):
+        super().__init__()
+
+        self.conv1 = nn.Conv2d(in_chan, mid_chan, kernel_size)
+        self.act = nn.LeakyReLU(negative_slope)
+        self.conv2 = nn.Conv2d(mid_chan, out_chan, kernel_size)
+
+    def forward(self, x):
+        x = self.conv1(x)
+        x = self.act(x)
+        x = self.conv2(x)
+        return x
+```
+
+The model `__init__` requires two positional arguments, the number of
+input and output channels.
+Other hyperparameters can be specified as keyword arguments, including
+the `scale_factor` useful for super-resolution tasks.
+Note that the `**kwargs` is necessary when `scale_factor` is not
+specified, because `scale_factor` is always passed when instantiating
+a model.
 
 
 ### Training
@@ -101,6 +172,12 @@ They can be implemented as callbacks in a user directory which is then
 passed by `--callback-at`.
 The default locations are searched first before the callback directory.
 So be aware of name collisions.
+
+The default locations are
+* models: `map2map/models/`
+* criteria: `torch.nn`
+* optimizers: `torch.optim`
+* normalizations: `map2map/data/norms/`
 
 This approach is good for experimentation.
 For example, one can play with a model `Bar` in `path/to/foo.py`, by
