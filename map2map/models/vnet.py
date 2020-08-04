@@ -6,7 +6,7 @@ from .narrow import narrow_like
 
 
 class VNet(nn.Module):
-    def __init__(self, in_chan, out_chan):
+    def __init__(self, in_chan, out_chan, **kwargs):
         super().__init__()
 
         self.conv_l0 = ResBlock(in_chan, 64, seq='CAC')
@@ -46,7 +46,7 @@ class VNet(nn.Module):
 
 
 class VNetFat(nn.Module):
-    def __init__(self, in_chan, out_chan):
+    def __init__(self, in_chan, out_chan, **kwargs):
         super().__init__()
 
         self.conv_l0 = nn.Sequential(

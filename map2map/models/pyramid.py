@@ -5,7 +5,7 @@ from .conv import ConvBlock, ResBlock, narrow_like
 
 
 class PyramidNet(nn.Module):
-    def __init__(self, in_chan, out_chan):
+    def __init__(self, in_chan, out_chan, **kwargs):
         super().__init__()
 
         self.down = nn.AvgPool3d(2, stride=2)

@@ -5,8 +5,8 @@ import torch.nn as nn
 def narrow_by(a, c):
     """Narrow a by size c symmetrically on all edges.
     """
-    ind = [slice(None)] * 2 + [slice(c, -c)] * (a.dim() - 2)
-    return a[tuple(ind)]
+    ind = (slice(None),) * 2 + (slice(c, -c),) * (a.dim() - 2)
+    return a[ind]
 
 
 def narrow_cast(*tensors):
