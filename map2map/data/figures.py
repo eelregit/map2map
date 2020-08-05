@@ -9,6 +9,10 @@ from matplotlib.colors import Normalize, LogNorm, SymLogNorm
 from matplotlib.cm import ScalarMappable
 
 
+def quantize(x):
+    return 2 ** round(log2(x), ndigits=1)
+
+
 def plt_slices(*fields, size=64, title=None, cmap=None, norm=None):
     """Plot slices of fields of more than 2 spatial dimensions.
     """
@@ -39,9 +43,6 @@ def plt_slices(*fields, size=64, title=None, cmap=None, norm=None):
         gridspec_kw={'height_ratios': nc * [im_size] + [cbar_height]}
     )
 
-    def quantize(x):
-        return 2 ** round(log2(x), ndigits=1)
-
     for f, (field, cmap_col, norm_col) in enumerate(zip(fields, cmap, norm)):
         all_non_neg = (field >= 0).all()
         all_non_pos = (field <= 0).all()
@@ -61,19 +62,19 @@ def plt_slices(*fields, size=64, title=None, cmap=None, norm=None):
 
             if all_non_neg:
                 if h1 > 0.1 * h2:
-                    norm_col = Normalize(vmin=0, vmax=quantize(2 * h2))
+                    norm_col = Normalize(vmin=0, vmax=quantize(h2))
                 else:
-                    norm_col = LogNorm(vmin=quantize(0.5 * l2), vmax=quantize(2 * h2))
+                    norm_col = LogNorm(vmin=quantize(l2), vmax=quantize(h2))
             elif all_non_pos:
-                warnings.warn('no implementation for all non-positive values')
+                warnings.warn('no implementation for all non-positive values yet')
                 norm_col = None
             else:
-                if w1 > 0.1 * w2:
-                    vlim = quantize(2.5 * w1)
+                vlim = quantize(max(-l2, h2))
+                if w1 > 0.1 * w2 or l1 * h1 >= 0:
                     norm_col = Normalize(vmin=-vlim, vmax=vlim)
                 else:
-                    vlim = quantize(w2)
-                    norm_col = SymLogNorm(linthresh=0.1 * w1, vmin=-vlim, vmax=vlim)
+                    linthresh = 0.1 * quantize(min(-l1, h1))
+                    norm_col = SymLogNorm(linthresh=linthresh, vmin=-vlim, vmax=vlim)
 
         for c in range(field.shape[0]):
             s = (c,) + (0,) * (nd - 2) + (slice(64),) * 2
