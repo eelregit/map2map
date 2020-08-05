@@ -37,9 +37,9 @@ def get_args():
 
 def add_common_args(parser):
     parser.add_argument('--in-norms', type=str_list, help='comma-sep. list '
-            'of input normalization functions from .data.norms')
+            'of input normalization functions')
     parser.add_argument('--tgt-norms', type=str_list, help='comma-sep. list '
-            'of target normalization functions from .data.norms')
+            'of target normalization functions')
     parser.add_argument('--crop', type=int,
             help='size to crop the input and target data. Default is the '
             'field size')
@@ -58,9 +58,9 @@ def add_common_args(parser):
             'crop and pad are sizes of the input resolution')
 
     parser.add_argument('--model', type=str, required=True,
-            help='model from .models')
+            help='(generator) model')
     parser.add_argument('--criterion', default='MSELoss', type=str,
-            help='model criterion from torch.nn')
+            help='loss function')
     parser.add_argument('--load-state', default=ckpt_link, type=str,
             help='path to load the states of model, optimizer, rng, etc. '
             'Default is the checkpoint. '
@@ -108,11 +108,11 @@ def add_train_args(parser):
             'same factor for all fields')
 
     parser.add_argument('--adv-model', type=str,
-            help='enable adversary model from .models')
+            help='adversary (discriminator) model, disabled by default')
     parser.add_argument('--adv-model-spectral-norm', action='store_true',
             help='enable spectral normalization on the adversary model')
     parser.add_argument('--adv-criterion', default='BCEWithLogitsLoss', type=str,
-            help='adversarial criterion from torch.nn')
+            help='adversarial loss function')
     parser.add_argument('--cgan', action='store_true',
             help='enable conditional GAN')
     parser.add_argument('--adv-start', default=0, type=int,
@@ -128,7 +128,7 @@ def add_train_args(parser):
             help='noise annealing duration')
 
     parser.add_argument('--optimizer', default='Adam', type=str,
-            help='optimizer from torch.optim')
+            help='optimization algorithm')
     parser.add_argument('--lr', type=float, required=True,
             help='initial learning rate')
     parser.add_argument('--optimizer-args', default='{}', type=json.loads,
