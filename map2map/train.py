@@ -16,10 +16,12 @@ from torch.utils.tensorboard import SummaryWriter
 from .data import FieldDataset, DistFieldSampler
 from .data.figures import plt_slices
 from . import models
-from .models import (narrow_cast, resample,
-        adv_model_wrapper, adv_criterion_wrapper,
-        add_spectral_norm, rm_spectral_norm,
-        InstanceNoise)
+from .models import (
+    narrow_cast, resample,
+    grad_penalty_reg,
+    add_spectral_norm, rm_spectral_norm,
+    InstanceNoise,
+)
 from .utils import import_attr, load_model_state_dict
 
 
@@ -127,7 +129,7 @@ def gpu_worker(local_rank, node, args):
                   scale_factor=args.scale_factor)
     model.to(device)
     model = DistributedDataParallel(model, device_ids=[device],
-            process_group=dist.new_group())
+                                    process_group=dist.new_group())
 
     criterion = import_attr(args.criterion, nn.__name__, args.callback_at)
     criterion = criterion()
@@ -145,7 +147,6 @@ def gpu_worker(local_rank, node, args):
     adv_model = adv_criterion = adv_optimizer = adv_scheduler = None
     if args.adv:
         adv_model = import_attr(args.adv_model, models.__name__, args.callback_at)
-        adv_model = adv_model_wrapper(adv_model)
         adv_model = adv_model(
             sum(args.in_chan + args.out_chan) if args.cgan
                 else sum(args.out_chan),
@@ -156,10 +157,9 @@ def gpu_worker(local_rank, node, args):
             add_spectral_norm(adv_model)
         adv_model.to(device)
         adv_model = DistributedDataParallel(adv_model, device_ids=[device],
-                process_group=dist.new_group())
+                                            process_group=dist.new_group())
 
         adv_criterion = import_attr(args.adv_criterion, nn.__name__, args.callback_at)
-        adv_criterion = adv_criterion_wrapper(adv_criterion)
         adv_criterion = adv_criterion()
         adv_criterion.to(device)
 
@@ -302,6 +302,8 @@ def train(epoch, loader, model, criterion, optimizer, scheduler,
             device=device)
 
     for i, (input, target) in enumerate(loader):
+        batch = epoch * len(loader) + i + 1
+
         input = input.to(device, non_blocking=True)
         target = target.to(device, non_blocking=True)
 
@@ -323,9 +325,9 @@ def train(epoch, loader, model, criterion, optimizer, scheduler,
             noise_std = args.instance_noise.std()
             if noise_std > 0:
                 noise = noise_std * torch.randn_like(output)
-                output = output + noise.detach()
+                output = output + noise
                 noise = noise_std * torch.randn_like(target)
-                target = target + noise.detach()
+                target = target + noise
                 del noise
 
             if args.cgan:
@@ -335,36 +337,61 @@ def train(epoch, loader, model, criterion, optimizer, scheduler,
             # discriminator
             set_requires_grad(adv_model, True)
 
-            eval = adv_model([output.detach(), target])
-            adv_loss_fake, adv_loss_real = adv_criterion(eval, [fake, adv_real])
+            score_out = adv_model(output.detach())
+            adv_loss_fake = adv_criterion(score_out, fake.expand_as(score_out))
             epoch_loss[3] += adv_loss_fake.item()
-            epoch_loss[4] += adv_loss_real.item()
-            adv_loss = 0.5 * (adv_loss_fake + adv_loss_real)
-            epoch_loss[2] += adv_loss.item()
 
             adv_optimizer.zero_grad()
-            adv_loss.backward()
+            adv_loss_fake.backward()
+
+            score_tgt = adv_model(target)
+            adv_loss_real = adv_criterion(score_tgt, adv_real.expand_as(score_tgt))
+            epoch_loss[4] += adv_loss_real.item()
+
+            adv_loss_real.backward()
+
+            adv_loss = adv_loss_fake + adv_loss_real
+            epoch_loss[2] += adv_loss.item()
+
+            if (args.adv_r1_reg_interval > 0
+                and  batch % args.adv_r1_reg_interval == 0):
+                score_tgt = adv_model(target.requires_grad_(True))
+
+                adv_loss_reg = grad_penalty_reg(score_tgt, target)
+                adv_loss_reg_ = (
+                    adv_loss_reg * args.adv_r1_reg_interval
+                    + 0 * score_tgt.sum()  # hack to trigger DDP allreduce hooks
+                )
+
+                adv_loss_reg_.backward()
+
+                if rank == 0:
+                    logger.add_scalar(
+                        'loss/batch/train/adv/reg',
+                        adv_loss_reg.item(),
+                        global_step=batch,
+                    )
+
             adv_optimizer.step()
             adv_grads = get_grads(adv_model)
 
             # generator adversarial loss
             set_requires_grad(adv_model, False)
 
-            eval_out = adv_model(output)
-            loss_adv, = adv_criterion(eval_out, real)
+            score_out = adv_model(output)
+            loss_adv = adv_criterion(score_out, real.expand_as(score_out))
             epoch_loss[1] += loss_adv.item()
 
-            ratio = loss.item() / (loss_adv.item() + 1e-8)
-            frac = args.loss_fraction
-            if epoch >= args.adv_start:
-                loss = frac * loss + (1 - frac) * ratio * loss_adv
+            optimizer.zero_grad()
+            loss_adv.backward()
+            optimizer.step()
+            grads = get_grads(model)
+        else:
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+            grads = get_grads(model)
 
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
-        grads = get_grads(model)
-
-        batch = epoch * len(loader) + i + 1
         if batch % args.log_interval == 0:
             dist.all_reduce(loss)
             loss /= world_size
@@ -392,9 +419,9 @@ def train(epoch, loader, model, criterion, optimizer, scheduler,
                     logger.add_scalar('grad/adv/last', adv_grads[-1],
                                       global_step=batch)
 
-                if args.adv and epoch >= args.adv_start and noise_std > 0:
-                    logger.add_scalar('instance_noise', noise_std,
-                                      global_step=batch)
+                    if noise_std > 0:
+                        logger.add_scalar('instance_noise', noise_std,
+                                          global_step=batch)
 
     dist.all_reduce(epoch_loss)
     epoch_loss /= len(loader) * world_size
@@ -462,16 +489,19 @@ def validate(epoch, loader, model, criterion, adv_model, adv_criterion,
                     target = torch.cat([input, target], dim=1)
 
                 # discriminator
-                eval = adv_model([output, target])
-                adv_loss_fake, adv_loss_real = adv_criterion(eval, [fake, real])
+                score_out = adv_model(output)
+                adv_loss_fake = adv_criterion(score_out, fake.expand_as(score_out))
                 epoch_loss[3] += adv_loss_fake.item()
+
+                score_tgt = adv_model(target)
+                adv_loss_real = adv_criterion(score_tgt, real.expand_as(score_tgt))
                 epoch_loss[4] += adv_loss_real.item()
-                adv_loss = 0.5 * (adv_loss_fake + adv_loss_real)
+
+                adv_loss = adv_loss_fake + adv_loss_real
                 epoch_loss[2] += adv_loss.item()
 
                 # generator adversarial loss
-                eval_out, _ = adv_criterion.split_input(eval, [fake, real])
-                loss_adv, = adv_criterion(eval_out, real)
+                loss_adv = adv_criterion(score_out, real.expand_as(score_out))
                 epoch_loss[1] += loss_adv.item()
 
     dist.all_reduce(epoch_loss)
@@ -552,5 +582,6 @@ def get_grads(model):
     grads = list(p.grad for n, p in model.named_parameters()
                  if '.weight' in n)
     grads = [grads[0], grads[-1]]
-    grads = [g.detach().norm().item() for g in grads]
+    with torch.no_grad():
+        grads = [g.flatten().norm().item() for g in grads]
     return grads

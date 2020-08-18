@@ -113,6 +113,10 @@ def add_train_args(parser):
             help='enable spectral normalization on the adversary model')
     parser.add_argument('--adv-criterion', default='BCEWithLogitsLoss', type=str,
             help='adversarial loss function')
+    parser.add_argument('--adv-r1-reg-interval', default=0, type=int,
+            help='interval (batches) between R1 regularization. '
+            'Disabled if non-positive; '
+            'lazy regularization if greater than 1 (not every batch)')
     parser.add_argument('--cgan', action='store_true',
             help='enable conditional GAN')
     parser.add_argument('--adv-start', default=0, type=int,
@@ -120,8 +124,6 @@ def add_train_args(parser):
     parser.add_argument('--adv-label-smoothing', default=1, type=float,
             help='label of real samples for the adversary model, '
             'e.g. 0.9 for label smoothing and 1 to disable')
-    parser.add_argument('--loss-fraction', default=0.5, type=float,
-            help='final fraction of loss (vs adv-loss)')
     parser.add_argument('--instance-noise', default=0, type=float,
             help='noise added to the adversary inputs to stabilize training')
     parser.add_argument('--instance-noise-batches', default=1e4, type=float,
@@ -165,7 +167,7 @@ def add_train_args(parser):
     parser.add_argument('--dist-backend', default='nccl', type=str,
             choices=['gloo', 'nccl'], help='distributed backend')
     parser.add_argument('--log-interval', default=100, type=int,
-            help='interval between logging training loss')
+            help='interval (batches) between logging training loss')
 
 
 def add_test_args(parser):
