@@ -124,18 +124,19 @@ def gpu_worker(local_rank, node, args):
 
     args.in_chan, args.out_chan = train_dataset.in_chan, train_dataset.tgt_chan
 
-    model = import_attr(args.model, models.__name__, args.callback_at)
+    model = import_attr(args.model, models, callback_at=args.callback_at)
     model = model(sum(args.in_chan), sum(args.out_chan),
                   scale_factor=args.scale_factor)
     model.to(device)
     model = DistributedDataParallel(model, device_ids=[device],
                                     process_group=dist.new_group())
 
-    criterion = import_attr(args.criterion, nn.__name__, args.callback_at)
+    criterion = import_attr(args.criterion, nn, models,
+                            callback_at=args.callback_at)
     criterion = criterion()
     criterion.to(device)
 
-    optimizer = import_attr(args.optimizer, optim.__name__, args.callback_at)
+    optimizer = import_attr(args.optimizer, optim, callback_at=args.callback_at)
     optimizer = optimizer(
         model.parameters(),
         lr=args.lr,
@@ -146,7 +147,8 @@ def gpu_worker(local_rank, node, args):
 
     adv_model = adv_criterion = adv_optimizer = adv_scheduler = None
     if args.adv:
-        adv_model = import_attr(args.adv_model, models.__name__, args.callback_at)
+        adv_model = import_attr(args.adv_model, models,
+                                callback_at=args.callback_at)
         adv_model = adv_model(
             sum(args.in_chan + args.out_chan) if args.cgan
                 else sum(args.out_chan),
@@ -159,11 +161,13 @@ def gpu_worker(local_rank, node, args):
         adv_model = DistributedDataParallel(adv_model, device_ids=[device],
                                             process_group=dist.new_group())
 
-        adv_criterion = import_attr(args.adv_criterion, nn.__name__, args.callback_at)
+        adv_criterion = import_attr(args.adv_criterion, nn, models,
+                                    callback_at=args.callback_at)
         adv_criterion = adv_criterion()
         adv_criterion.to(device)
 
-        adv_optimizer = import_attr(args.optimizer, optim.__name__, args.callback_at)
+        adv_optimizer = import_attr(args.optimizer, optim,
+                                    callback_at=args.callback_at)
         adv_optimizer = adv_optimizer(
             adv_model.parameters(),
             lr=args.adv_lr,

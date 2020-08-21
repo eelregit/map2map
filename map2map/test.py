@@ -40,9 +40,9 @@ def test(args):
 
     in_chan, out_chan = test_dataset.in_chan, test_dataset.tgt_chan
 
-    model = import_attr(args.model, models.__name__, args.callback_at)
+    model = import_attr(args.model, models, callback_at=args.callback_at)
     model = model(sum(in_chan), sum(out_chan), scale_factor=args.scale_factor)
-    criterion = import_attr(args.criterion, torch.nn.__name__, args.callback_at)
+    criterion = import_attr(args.criterion, torch.nn, callback_at=args.callback_at)
     criterion = criterion()
 
     device = torch.device('cpu')
