@@ -28,10 +28,9 @@ def wgan_grad_penalty(critic, x, y, lam=10):
     alpha = torch.rand(batch_size, device=device)
     alpha = alpha.reshape(batch_size, *(1,) * (x.dim() - 1))
 
-    xy = alpha * x + (1 - alpha) * y
-    xy.requires_grad = True
+    xy = alpha * x.detach() + (1 - alpha) * y.detach()
 
-    score = critic(xy)
+    score = critic(xy.requires_grad_(True))
     # average over spatial dimensions if present
     score = score.flatten(start_dim=1).mean(dim=1)
     # sum over batches because graphs are mostly independent (w/o batchnorm)
@@ -46,6 +45,9 @@ def wgan_grad_penalty(critic, x, y, lam=10):
     )
 
     grad = grad.flatten(start_dim=1)
-    penalty = lam * ((grad.norm(p=2, dim=1) - 1) ** 2).mean()
+    penalty = (
+        lam * ((grad.norm(p=2, dim=1) - 1) ** 2).mean()
+        + 0 * score  # hack to trigger DDP allreduce hooks
+    )
 
     return penalty
