@@ -42,7 +42,7 @@ def import_attr(name, *pkgs, callback_at=None):
             try:
                 return getattr(
                     importlib.import_module(pkg.__name__ + '.' + mod), attr)
-            except (ModuleNotFoundError, AttributeError):
+            except (ModuleNotFoundError, AttributeError) as e:
                 errors.append(e)
 
         if callback_at is None:
