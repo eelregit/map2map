@@ -68,14 +68,14 @@ class FieldDataset(Dataset):
         if in_norms is not None:
             assert len(in_patterns) == len(in_norms), \
                     'numbers of input normalization functions and fields do not match'
-            in_norms = [import_attr(norm, norms.__name__, callback_at)
+            in_norms = [import_attr(norm, norms, callback_at=callback_at)
                         for norm in in_norms]
         self.in_norms = in_norms
 
         if tgt_norms is not None:
             assert len(tgt_patterns) == len(tgt_norms), \
                     'numbers of target normalization functions and fields do not match'
-            tgt_norms = [import_attr(norm, norms.__name__, callback_at)
+            tgt_norms = [import_attr(norm, norms, callback_at=callback_at)
                          for norm in tgt_norms]
         self.tgt_norms = tgt_norms
 
