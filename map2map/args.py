@@ -111,10 +111,10 @@ def add_train_args(parser):
             help='adversary (discriminator) model, disabled by default')
     parser.add_argument('--adv-model-spectral-norm', action='store_true',
             help='enable spectral normalization on the adversary model')
-    parser.add_argument('--adv-criterion', default='BCEWithLogitsLoss', type=str,
+    parser.add_argument('--adv-criterion', default='WDistLoss', type=str,
             help='adversarial loss function')
-    parser.add_argument('--adv-r1-reg-interval', default=0, type=int,
-            help='interval (batches) between R1 regularization. '
+    parser.add_argument('--adv-wgan-gp-interval', default=1, type=int,
+            help='interval (batches) between WGAN gradient penalty. '
             'Disabled if non-positive; '
             'lazy regularization if greater than 1 (not every batch)')
     parser.add_argument('--cgan', action='store_true',

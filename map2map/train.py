@@ -18,6 +18,7 @@ from .data.figures import plt_slices
 from . import models
 from .models import (
     narrow_cast, resample,
+    WDistLoss, wasserstein_distance_loss, wgan_grad_penalty,
     grad_penalty_reg,
     add_spectral_norm, rm_spectral_norm,
     InstanceNoise,
@@ -357,15 +358,10 @@ def train(epoch, loader, model, criterion, optimizer, scheduler,
             adv_loss = adv_loss_fake + adv_loss_real
             epoch_loss[2] += adv_loss.item()
 
-            if (args.adv_r1_reg_interval > 0
-                and  batch % args.adv_r1_reg_interval == 0):
-                score_tgt = adv_model(target.requires_grad_(True))
-
-                adv_loss_reg = grad_penalty_reg(score_tgt, target)
-                adv_loss_reg_ = (
-                    adv_loss_reg * args.adv_r1_reg_interval
-                    + 0 * score_tgt.sum()  # hack to trigger DDP allreduce hooks
-                )
+            if (args.adv_wgan_gp_interval > 0
+                and  batch % args.adv_wgan_gp_interval == 0):
+                adv_loss_reg = wgan_grad_penalty(adv_model, output, target)
+                adv_loss_reg_ = adv_loss_reg * args.adv_wgan_gp_interval
 
                 adv_loss_reg_.backward()
 
