@@ -8,6 +8,8 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import Normalize, LogNorm, SymLogNorm
 from matplotlib.cm import ScalarMappable
 
+from ..models import lag2eul, power
+
 
 def quantize(x):
     return 2 ** round(log2(x), ndigits=1)
@@ -15,14 +17,15 @@ def quantize(x):
 
 def plt_slices(*fields, size=64, title=None, cmap=None, norm=None):
     """Plot slices of fields of more than 2 spatial dimensions.
+
+    Each field should have a channel dimension followed by spatial dimensions,
+    i.e. no batch dimension.
     """
     plt.close('all')
 
-    fields = [field.detach().cpu().numpy() if isinstance(field, torch.Tensor)
-            else field for field in fields]
+    assert all(isinstance(field, torch.Tensor) for field in fields)
 
-    assert all(isinstance(field, np.ndarray) for field in fields)
-    assert all(field.ndim == fields[0].ndim for field in fields)
+    fields = [field.detach().cpu().numpy() for field in fields]
 
     nc = max(field.shape[0] for field in fields)
     nf = len(fields)
@@ -106,6 +109,50 @@ def plt_slices(*fields, size=64, title=None, cmap=None, norm=None):
             cax=axes[-1, f],
             orientation='horizontal',
         )
+
+    fig.tight_layout()
+
+    return fig
+
+
+def plt_power(*fields, l2e=False, label=None):
+    """Plot power spectra of fields.
+
+    Each field should have batch and channel dimensions followed by spatial
+    dimensions.
+
+    Optionally the field can be transformed by lag2eul first.
+
+    See `map2map.models.power`.
+    """
+    plt.close('all')
+
+    if label is not None:
+        assert len(label) == len(fields)
+    else:
+        label = [None] * len(fields)
+
+    with torch.no_grad():
+        if l2e:
+            fields = lag2eul(*fields)
+
+        ks, Ps = [], []
+        for field in fields:
+            k, P, _ = power(field)
+            ks.append(k)
+            Ps.append(P)
+
+    ks = [k.cpu().numpy() for k in ks]
+    Ps = [P.cpu().numpy() for P in Ps]
+
+    fig, axes = plt.subplots(figsize=(4.8, 3.6), dpi=150)
+
+    for k, P, l in zip(ks, Ps, label):
+        axes.loglog(k, P, label=l, alpha=0.7)
+
+    axes.legend()
+    axes.set_xlabel('unnormalized wavenumber')
+    axes.set_ylabel('unnormalized power')
 
     fig.tight_layout()
 

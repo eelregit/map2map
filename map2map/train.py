@@ -14,7 +14,7 @@ from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 
 from .data import FieldDataset, DistFieldSampler
-from .data.figures import plt_slices
+from .data.figures import plt_slices, plt_power
 from . import models
 from .models import (
     narrow_cast, resample,
@@ -450,13 +450,28 @@ def train(epoch, loader, model, criterion, optimizer, scheduler,
         skip_chan = 0
         if args.adv and epoch >= args.adv_start and args.cgan:
             skip_chan = sum(args.in_chan)
+
         fig = plt_slices(
             input[-1], output[-1, skip_chan:], target[-1, skip_chan:],
             output[-1, skip_chan:] - target[-1, skip_chan:],
             title=['in', 'out', 'tgt', 'out - tgt'],
         )
-        logger.add_figure('fig/epoch/train', fig, global_step=epoch+1)
+        logger.add_figure('fig/train', fig, global_step=epoch+1)
         fig.clf()
+
+        #fig = plt_power(
+        #    input, output[:, skip_chan:], target[:, skip_chan:],
+        #    label=['in', 'out', 'tgt'],
+        #)
+        #logger.add_figure('fig/train/power/lag', fig, global_step=epoch+1)
+        #fig.clf()
+
+        #fig = plt_power(
+        #    input, output[:, skip_chan:], target[:, skip_chan:],
+        #    l2e=True, label=['in', 'out', 'tgt'],
+        #)
+        #logger.add_figure('fig/train/power/eul', fig, global_step=epoch+1)
+        #fig.clf()
 
     return epoch_loss
 
@@ -531,13 +546,28 @@ def validate(epoch, loader, model, criterion, adv_model, adv_criterion,
         skip_chan = 0
         if args.adv and epoch >= args.adv_start and args.cgan:
             skip_chan = sum(args.in_chan)
+
         fig = plt_slices(
             input[-1], output[-1, skip_chan:], target[-1, skip_chan:],
             output[-1, skip_chan:] - target[-1, skip_chan:],
             title=['in', 'out', 'tgt', 'out - tgt'],
         )
-        logger.add_figure('fig/epoch/val', fig, global_step=epoch+1)
+        logger.add_figure('fig/val', fig, global_step=epoch+1)
         fig.clf()
+
+        #fig = plt_power(
+        #    input, output[:, skip_chan:], target[:, skip_chan:],
+        #    label=['in', 'out', 'tgt'],
+        #)
+        #logger.add_figure('fig/val/power/lag', fig, global_step=epoch+1)
+        #fig.clf()
+
+        #fig = plt_power(
+        #    input, output[:, skip_chan:], target[:, skip_chan:],
+        #    l2e=True, label=['in', 'out', 'tgt'],
+        #)
+        #logger.add_figure('fig/val/power/eul', fig, global_step=epoch+1)
+        #fig.clf()
 
     return epoch_loss
 
