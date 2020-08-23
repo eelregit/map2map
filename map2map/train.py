@@ -14,7 +14,7 @@ from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 
 from .data import FieldDataset, DistFieldSampler
-from .data.figures import plt_slices
+from .data.figures import plt_slices, plt_power
 from . import models
 from .models import narrow_cast, resample, Lag2Eul
 from .utils import import_attr, load_model_state_dict
@@ -306,8 +306,17 @@ def train(epoch, loader, model, lag2eul, criterion,
             title=['in', 'lag_out', 'lag_tgt', 'lag_out - lag_tgt',
                          'eul_out', 'eul_tgt', 'eul_out - eul_tgt'],
         )
-        logger.add_figure('fig/epoch/train', fig, global_step=epoch+1)
+        logger.add_figure('fig/train', fig, global_step=epoch+1)
         fig.clf()
+
+        #fig = plt_power(input, lag_out, lag_tgt, label=['in', 'out', 'tgt'])
+        #logger.add_figure('fig/train/power/lag', fig, global_step=epoch+1)
+        #fig.clf()
+
+        #fig = plt_power(input, lag_out, lag_tgt, l2e=True,
+        #                label=['in', 'out', 'tgt'])
+        #logger.add_figure('fig/train/power/eul', fig, global_step=epoch+1)
+        #fig.clf()
 
     return epoch_loss
 
@@ -358,8 +367,17 @@ def validate(epoch, loader, model, lag2eul, criterion, logger, device, args):
             title=['in', 'lag_out', 'lag_tgt', 'lag_out - lag_tgt',
                          'eul_out', 'eul_tgt', 'eul_out - eul_tgt'],
         )
-        logger.add_figure('fig/epoch/val', fig, global_step=epoch+1)
+        logger.add_figure('fig/val', fig, global_step=epoch+1)
         fig.clf()
+
+        #fig = plt_power(input, lag_out, lag_tgt, label=['in', 'out', 'tgt'])
+        #logger.add_figure('fig/val/power/lag', fig, global_step=epoch+1)
+        #fig.clf()
+
+        #fig = plt_power(input, lag_out, lag_tgt, l2e=True,
+        #                label=['in', 'out', 'tgt'])
+        #logger.add_figure('fig/val/power/eul', fig, global_step=epoch+1)
+        #fig.clf()
 
     return epoch_loss
 
