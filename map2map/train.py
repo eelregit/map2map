@@ -16,7 +16,7 @@ from torch.utils.tensorboard import SummaryWriter
 from .data import FieldDataset, DistFieldSampler
 from .data.figures import plt_slices, plt_power
 from . import models
-from .models import narrow_cast, resample, Lag2Eul
+from .models import narrow_cast, resample, lag2eul
 from .utils import import_attr, load_model_state_dict
 
 
@@ -126,8 +126,6 @@ def gpu_worker(local_rank, node, args):
     model = DistributedDataParallel(model, device_ids=[device],
             process_group=dist.new_group())
 
-    lag2eul = Lag2Eul()
-
     criterion = import_attr(args.criterion, nn.__name__, args.callback_at)
     criterion = criterion()
     criterion.to(device)
@@ -193,13 +191,13 @@ def gpu_worker(local_rank, node, args):
     for epoch in range(start_epoch, args.epochs):
         train_sampler.set_epoch(epoch)
 
-        train_loss = train(epoch, train_loader, model, lag2eul, criterion,
-            optimizer, scheduler, logger, device, args)
+        train_loss = train(epoch, train_loader, model, criterion,
+                           optimizer, scheduler, logger, device, args)
         epoch_loss = train_loss
 
         if args.val:
-            val_loss = validate(epoch, val_loader, model, lag2eul, criterion,
-                logger, device, args)
+            val_loss = validate(epoch, val_loader, model, criterion,
+                                logger, device, args)
             #epoch_loss = val_loss
 
         if args.reduce_lr_on_plateau:
@@ -229,8 +227,8 @@ def gpu_worker(local_rank, node, args):
     dist.destroy_process_group()
 
 
-def train(epoch, loader, model, lag2eul, criterion,
-        optimizer, scheduler, logger, device, args):
+def train(epoch, loader, model, criterion,
+          optimizer, scheduler, logger, device, args):
     model.train()
 
     rank = dist.get_rank()
@@ -321,7 +319,7 @@ def train(epoch, loader, model, lag2eul, criterion,
     return epoch_loss
 
 
-def validate(epoch, loader, model, lag2eul, criterion, logger, device, args):
+def validate(epoch, loader, model, criterion, logger, device, args):
     model.eval()
 
     rank = dist.get_rank()
