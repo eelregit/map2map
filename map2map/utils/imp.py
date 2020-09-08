@@ -1,4 +1,5 @@
 import os
+import sys
 import importlib
 
 
@@ -51,6 +52,7 @@ def import_attr(name, *pkgs, callback_at=None):
 
         spec = importlib.util.spec_from_file_location(mod, callback_at)
         module = importlib.util.module_from_spec(spec)
+        sys.modules[mod] = module
         spec.loader.exec_module(module)
 
         return getattr(module, attr)
