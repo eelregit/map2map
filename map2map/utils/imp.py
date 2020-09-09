@@ -1,8 +1,10 @@
 import os
 import sys
 import importlib
+from functools import lru_cache
 
 
+@lru_cache(maxsize=None)
 def import_attr(name, *pkgs, callback_at=None):
     """Import attribute. Try package first and then callback directory.
 
@@ -49,6 +51,9 @@ def import_attr(name, *pkgs, callback_at=None):
         callback_at = os.path.join(callback_at, mod + '.py')
         if not os.path.isfile(callback_at):
             raise FileNotFoundError('callback file not found')
+
+        if mod in sys.modules:
+            return getattr(sys.modules[mod], attr)
 
         spec = importlib.util.spec_from_file_location(mod, callback_at)
         module = importlib.util.module_from_spec(spec)

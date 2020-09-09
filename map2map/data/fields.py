@@ -68,16 +68,14 @@ class FieldDataset(Dataset):
         if in_norms is not None:
             assert len(in_patterns) == len(in_norms), \
                     'numbers of input normalization functions and fields do not match'
-            in_norms = [import_attr(norm, norms, callback_at=callback_at)
-                        for norm in in_norms]
         self.in_norms = in_norms
 
         if tgt_norms is not None:
             assert len(tgt_patterns) == len(tgt_norms), \
                     'numbers of target normalization functions and fields do not match'
-            tgt_norms = [import_attr(norm, norms, callback_at=callback_at)
-                         for norm in tgt_norms]
         self.tgt_norms = tgt_norms
+
+        self.callback_at = callback_at
 
         self.augment = augment
         if self.ndim == 1 and self.augment:
@@ -151,9 +149,11 @@ class FieldDataset(Dataset):
 
         if self.in_norms is not None:
             for norm, x in zip(self.in_norms, in_fields):
+                norm = import_attr(norm, norms, callback_at=self.callback_at)
                 norm(x)
         if self.tgt_norms is not None:
             for norm, x in zip(self.tgt_norms, tgt_fields):
+                norm = import_attr(norm, norms, callback_at=self.callback_at)
                 norm(x)
 
         if self.augment:
