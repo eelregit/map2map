@@ -79,19 +79,22 @@ def plt_slices(*fields, size=64, title=None, cmap=None, norm=None):
                     norm_col = SymLogNorm(linthresh=linthresh, vmin=-vlim, vmax=vlim)
 
         for c in range(field.shape[0]):
-            s0 = (c,) + tuple(d // 2 for d in field.shape[1:-2])
-            s1 = (
-                slice(
-                    (field.shape[-2] - size) // 2,
-                    (field.shape[-2] + size) // 2,
-                ),
-                slice(
-                    (field.shape[-1] - size) // 2,
-                    (field.shape[-1] + size) // 2,
-                ),
-            )
+            s = (c,) + tuple(d // 2 for d in field.shape[1:-2])
+            if size is None:
+                s += (slice(None),) * 2
+            else:
+                s += (
+                    slice(
+                        (field.shape[-2] - size) // 2,
+                        (field.shape[-2] + size) // 2,
+                    ),
+                    slice(
+                        (field.shape[-1] - size) // 2,
+                        (field.shape[-1] + size) // 2,
+                    ),
+                )
 
-            axes[c, f].pcolormesh(field[s0 + s1], cmap=cmap_col, norm=norm_col)
+            axes[c, f].pcolormesh(field[s], cmap=cmap_col, norm=norm_col)
 
             axes[c, f].set_aspect('equal')
 
