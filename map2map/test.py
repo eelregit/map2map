@@ -34,7 +34,7 @@ def test(args):
     )
     test_loader = DataLoader(
         test_dataset,
-        batch_size=args.batches,
+        batch_size=args.batch_size,
         shuffle=False,
         num_workers=args.loader_workers,
     )
