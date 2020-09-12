@@ -26,7 +26,7 @@ m2m.py test \
     --test-tgt-patterns "test/D0-*.npy,test/D1-*.npy" \
     --in-norms RnD.R0,RnD.R1 --tgt-norms RnD.D0,RnD.D1 \
     --model model.Net --callback-at . \
-    --batches 1 \
+    --batch-size 1 \
     --load-state checkpoint.pt
 
 
