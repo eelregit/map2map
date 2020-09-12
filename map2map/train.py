@@ -159,8 +159,10 @@ def gpu_worker(local_rank, node, args):
         load_model_state_dict(model.module, state['model'],
                 strict=args.load_state_strict)
 
-        optimizer.load_state_dict(state['optimizer'])
-        scheduler.load_state_dict(state['scheduler'])
+        if 'optimizer' in state:
+            optimizer.load_state_dict(state['optimizer'])
+        if 'scheduler' in state:
+            scheduler.load_state_dict(state['scheduler'])
 
         torch.set_rng_state(state['rng'].cpu())  # move rng state back
 
