@@ -144,7 +144,9 @@ def add_train_args(parser):
     parser.add_argument('--dist-backend', default='nccl', type=str,
             choices=['gloo', 'nccl'], help='distributed backend')
     parser.add_argument('--log-interval', default=100, type=int,
-            help='interval between logging training loss')
+            help='interval (batches) between logging training loss')
+    parser.add_argument('--detect-anomaly', action='store_true',
+            help='enable anomaly detection for the autograd engine')
 
 
 def add_test_args(parser):

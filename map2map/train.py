@@ -53,7 +53,8 @@ def gpu_worker(local_rank, node, args):
     # Need randomness across processes, for sampler, augmentation, noise etc.
     # Note DDP broadcasts initial model states from rank 0
     torch.manual_seed(args.seed + rank)
-    #torch.backends.cudnn.deterministic = True  # NOTE: test perf
+    # good practice to disable cudnn.benchmark if enabling cudnn.deterministic
+    #torch.backends.cudnn.deterministic = True
 
     dist_init(rank, args)
 
@@ -180,7 +181,10 @@ def gpu_worker(local_rank, node, args):
 
         del state
 
-    torch.backends.cudnn.benchmark = True  # NOTE: test perf
+    torch.backends.cudnn.benchmark = True
+
+    if args.detect_anomaly:
+        torch.autograd.set_detect_anomaly(True)
 
     logger = None
     if rank == 0:
