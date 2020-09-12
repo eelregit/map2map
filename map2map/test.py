@@ -28,7 +28,8 @@ def test(args):
         crop_start=args.crop_start,
         crop_stop=args.crop_stop,
         crop_step=args.crop_step,
-        pad=args.pad,
+        in_pad=args.in_pad,
+        tgt_pad=args.tgt_pad,
         scale_factor=args.scale_factor,
     )
     test_loader = DataLoader(

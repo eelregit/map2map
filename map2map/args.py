@@ -50,9 +50,12 @@ def add_common_args(parser):
             'corner to the origin')
     parser.add_argument('--crop-step', type=int,
             help='spacing between crops. Default is the crop size')
-    parser.add_argument('--pad', default=0, type=int,
+    parser.add_argument('--in-pad', '--pad', default=0, type=int,
             help='size to pad the input data beyond the crop size, assuming '
             'periodic boundary condition')
+    parser.add_argument('--tgt-pad', default=0, type=int,
+            help='size to pad the target data beyond the crop size, assuming '
+            'periodic boundary condition, useful for super-resolution')
     parser.add_argument('--scale-factor', default=1, type=int,
             help='upsampling factor for super-resolution, in which case '
             'crop and pad are sizes of the input resolution')
