@@ -78,7 +78,8 @@ def gpu_worker(local_rank, node, args):
         crop_start=args.crop_start,
         crop_stop=args.crop_stop,
         crop_step=args.crop_step,
-        pad=args.pad,
+        in_pad=args.in_pad,
+        tgt_pad=args.tgt_pad,
         scale_factor=args.scale_factor,
     )
     train_sampler = DistFieldSampler(train_dataset, shuffle=True,
@@ -108,7 +109,8 @@ def gpu_worker(local_rank, node, args):
             crop_start=args.crop_start,
             crop_stop=args.crop_stop,
             crop_step=args.crop_step,
-            pad=args.pad,
+            in_pad=args.in_pad,
+            tgt_pad=args.tgt_pad,
             scale_factor=args.scale_factor,
         )
         val_sampler = DistFieldSampler(val_dataset, shuffle=False,
