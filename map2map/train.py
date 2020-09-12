@@ -14,10 +14,9 @@ from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 
 from .data import FieldDataset, DistFieldSampler
-from .data.figures import plt_slices, plt_power
 from . import models
 from .models import narrow_cast, resample, lag2eul
-from .utils import import_attr, load_model_state_dict
+from .utils import import_attr, load_model_state_dict, plt_slices, plt_power
 
 
 ckpt_link = 'checkpoint.pt'
