@@ -72,7 +72,9 @@ def add_common_args(parser):
             help='allow incompatible keys when loading model states',
             dest='load_state_strict')
 
-    parser.add_argument('--batches', type=int, required=True,
+    # somehow I named it "batches" instead of batch_size at first
+    # "batches" is kept for now for backward compatibility
+    parser.add_argument('--batch-size', '--batches', type=int, required=True,
             help='mini-batch size, per GPU in training or in total in testing')
     parser.add_argument('--loader-workers', default=-8, type=int,
             help='number of subprocesses per data loader. '
@@ -200,7 +202,7 @@ def str_list(s):
 
 def set_common_args(args):
     if args.loader_workers < 0:
-        args.loader_workers *= - args.batches
+        args.loader_workers *= - args.batch_size
 
 
 def set_train_args(args):

@@ -36,7 +36,7 @@ srun m2m.py train \
     --val-tgt-patterns "val/D0-*.npy,val/D1-*.npy" \
     --in-norms RnD.R0,RnD.R1 --tgt-norms RnD.D0,RnD.D1 \
     --model model.Net --callback-at . \
-    --lr 1e-4 --batches 1 \
+    --lr 1e-4 --batch-size 1 \
     --epochs 1024 --seed $RANDOM
 
 

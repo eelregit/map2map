@@ -87,7 +87,7 @@ def gpu_worker(local_rank, node, args):
                                      div_shuffle_dist=args.div_shuffle_dist)
     train_loader = DataLoader(
         train_dataset,
-        batch_size=args.batches,
+        batch_size=args.batch_size,
         shuffle=False,
         sampler=train_sampler,
         num_workers=args.loader_workers,
@@ -118,7 +118,7 @@ def gpu_worker(local_rank, node, args):
                                        div_shuffle_dist=args.div_shuffle_dist)
         val_loader = DataLoader(
             val_dataset,
-            batch_size=args.batches,
+            batch_size=args.batch_size,
             shuffle=False,
             sampler=val_sampler,
             num_workers=args.loader_workers,
