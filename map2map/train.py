@@ -636,6 +636,5 @@ def get_grads(model):
     grads = list(p.grad for n, p in model.named_parameters()
                  if '.weight' in n)
     grads = [grads[0], grads[-1]]
-    with torch.no_grad():
-        grads = [g.flatten().norm().item() for g in grads]
+    grads = [g.detach().norm().item() for g in grads]
     return grads
