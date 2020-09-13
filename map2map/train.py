@@ -184,6 +184,7 @@ def gpu_worker(local_rank, node, args):
         logger = SummaryWriter()
 
     if rank == 0:
+        print('pytorch {}'.format(torch.__version__))
         pprint(vars(args))
         sys.stdout.flush()
 
