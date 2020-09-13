@@ -11,6 +11,7 @@ from .utils import import_attr, load_model_state_dict
 
 
 def test(args):
+    print('pytorch {}'.format(torch.__version__))
     pprint(vars(args))
     sys.stdout.flush()
 
