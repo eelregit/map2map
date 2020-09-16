@@ -75,8 +75,10 @@ def plt_slices(*fields, size=64, title=None, cmap=None, norm=None):
                 if w1 > 0.1 * w2 or l1 * h1 >= 0:
                     norm_col = Normalize(vmin=-vlim, vmax=vlim)
                 else:
-                    linthresh = 0.1 * quantize(min(-l1, h1))
-                    norm_col = SymLogNorm(linthresh=linthresh, vmin=-vlim, vmax=vlim)
+                    linthresh = quantize(min(-l1, h1))
+                    linscale = np.log10(vlim / linthresh)
+                    norm_col = SymLogNorm(linthresh=linthresh, linscale=linscale,
+                                          vmin=-vlim, vmax=vlim, base=10)
 
         for c in range(field.shape[0]):
             s = (c,) + tuple(d // 2 for d in field.shape[1:-2])
