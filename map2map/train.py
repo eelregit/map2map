@@ -196,7 +196,7 @@ def gpu_worker(local_rank, node, args):
         start_epoch = state['epoch']
 
         load_model_state_dict(model.module, state['model'],
-                strict=args.load_state_strict)
+                              strict=args.load_state_strict)
 
         if 'optimizer' in state:
             optimizer.load_state_dict(state['optimizer'])
@@ -205,8 +205,8 @@ def gpu_worker(local_rank, node, args):
 
         if args.adv:
             if 'adv_model' in state:
-            load_model_state_dict(adv_model.module, state['adv_model'],
-                    strict=args.load_state_strict)
+                load_model_state_dict(adv_model.module, state['adv_model'],
+                                      strict=args.load_state_strict)
 
             if 'adv_optimizer' in state:
                 adv_optimizer.load_state_dict(state['adv_optimizer'])
