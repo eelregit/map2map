@@ -113,9 +113,9 @@ def add_train_args(parser):
             'same factor for all fields')
 
     parser.add_argument('--adv-model', type=str,
-            help='adversary (discriminator) model, disabled by default')
+            help='discriminator model, disabled by default')
     parser.add_argument('--adv-model-spectral-norm', action='store_true',
-            help='enable spectral normalization on the adversary model')
+            help='enable spectral normalization on the discriminator')
     parser.add_argument('--adv-criterion', default='WDistLoss', type=str,
             help='adversarial loss function')
     parser.add_argument('--adv-wgan-gp-interval', default=1, type=int,
@@ -126,8 +126,10 @@ def add_train_args(parser):
             help='enable conditional GAN')
     parser.add_argument('--adv-start', default=0, type=int,
             help='epoch to start adversarial training')
+    parser.add_argument('--adv-iter-ratio', default=1, type=int,
+            help='discriminator iterations per generator update')
     parser.add_argument('--adv-label-smoothing', default=1, type=float,
-            help='label of real samples for the adversary model, '
+            help='label of real samples for the discriminator, '
             'e.g. 0.9 for label smoothing and 1 to disable')
     parser.add_argument('--instance-noise', default=0, type=float,
             help='noise added to the adversary inputs to stabilize training')

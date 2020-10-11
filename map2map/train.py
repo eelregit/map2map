@@ -389,16 +389,17 @@ def train(epoch, loader, model, criterion, optimizer, scheduler,
             adv_grads = get_grads(adv_model)
 
             # generator adversarial loss
-            set_requires_grad(adv_model, False)
+            if batch % args.adv_iter_ratio == 0:
+                set_requires_grad(adv_model, False)
 
-            score_out = adv_model(output)
-            loss_adv = adv_criterion(score_out, real.expand_as(score_out))
-            epoch_loss[1] += loss_adv.item()
+                score_out = adv_model(output)
+                loss_adv = adv_criterion(score_out, real.expand_as(score_out))
+                epoch_loss[1] += args.adv_iter_ratio * loss_adv.item()
 
-            optimizer.zero_grad()
-            loss_adv.backward()
-            optimizer.step()
-            grads = get_grads(model)
+                optimizer.zero_grad()
+                loss_adv.backward()
+                optimizer.step()
+                grads = get_grads(model)
         else:
             optimizer.zero_grad()
             loss.backward()
