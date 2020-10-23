@@ -19,7 +19,7 @@ def lag2eul(*xs, rm_dis_mean=True, periodic=False):
     z = 0
     Boxsize = 1000
     Nmesh = 512
-    dis_norm = 6 * D(z) * Nmesh / Boxsize  # to mesh unit
+    dis_norm = Nmesh / Boxsize  # to mesh unit
 
     if any(x.dim() != 5 for x in xs):
         raise NotImplementedError('only support 3d fields for now')
