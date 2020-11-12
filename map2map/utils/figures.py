@@ -14,7 +14,7 @@ def quantize(x):
     return 2 ** round(log2(x), ndigits=1)
 
 
-def plt_slices(*fields, size=64, title=None, cmap=None, norm=None):
+def plt_slices(*fields, size=512, title=None, cmap=None, norm=None):
     """Plot slices of fields of more than 2 spatial dimensions.
 
     Each field should have a channel dimension followed by spatial dimensions,
@@ -80,7 +80,7 @@ def plt_slices(*fields, size=64, title=None, cmap=None, norm=None):
                     linthresh = quantize(min(-l1, h1))
                     linscale = np.log10(vlim / linthresh)
                     norm_col = SymLogNorm(linthresh=linthresh, linscale=linscale,
-                                          vmin=-vlim, vmax=vlim, base=10)
+                                          vmin=-vlim, vmax=vlim)
 
         for c in range(field.shape[0]):
             s = (c,) + tuple(d // 2 for d in field.shape[1:-2])

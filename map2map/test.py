@@ -4,7 +4,7 @@ import numpy as np
 import torch
 from torch.utils.data import DataLoader
 
-from .data import FieldDataset
+from .data import FieldDataset, norms
 from . import models
 from .models import narrow_cast
 from .utils import import_attr, load_model_state_dict
@@ -49,6 +49,7 @@ def test(args):
 
     device = torch.device('cpu')
     state = torch.load(args.load_state, map_location=device)
+    epoch_number = state['epoch']
     load_model_state_dict(model, state['model'], strict=args.load_state_strict)
     print('model state at epoch {} loaded from {}'.format(
         state['epoch'], args.load_state))
@@ -59,7 +60,8 @@ def test(args):
     with torch.no_grad():
         for i, (input, target) in enumerate(test_loader):
             output = model(input)
-            input, output, target = narrow_cast(input, output, target)
+            #input, output, target = narrow_cast(input, output, target)
+
 
             loss = criterion(output, target)
 
@@ -68,14 +70,16 @@ def test(args):
             if args.in_norms is not None:
                 start = 0
                 for norm, stop in zip(test_dataset.in_norms, np.cumsum(in_chan)):
+                    norm = import_attr(norm, norms, callback_at=args.callback_at)
                     norm(input[:, start:stop], undo=True)
                     start = stop
             if args.tgt_norms is not None:
                 start = 0
                 for norm, stop in zip(test_dataset.tgt_norms, np.cumsum(out_chan)):
+                    norm = import_attr(norm, norms, callback_at=args.callback_at)
                     norm(output[:, start:stop], undo=True)
                     norm(target[:, start:stop], undo=True)
                     start = stop
 
-            np.savez('{}.npz'.format(i), input=input.numpy(),
+            np.savez('npz_files/Epoch' + str(epoch_number) +'-sample' + '{}.npz'.format(i), input=input.numpy(),
                     output=output.numpy(), target=target.numpy())

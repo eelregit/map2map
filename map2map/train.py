@@ -4,6 +4,7 @@ import time
 import sys
 from pprint import pprint
 import torch
+import numpy as np
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
@@ -467,12 +468,14 @@ def train(epoch, loader, model, criterion, optimizer, scheduler,
         logger.add_figure('fig/train', fig, global_step=epoch+1)
         fig.clf()
 
-        #fig = plt_power(
-        #    input, output[:, skip_chan:], target[:, skip_chan:],
-        #    label=['in', 'out', 'tgt'],
-        #)
-        #logger.add_figure('fig/train/power/lag', fig, global_step=epoch+1)
-        #fig.clf()
+
+
+        fig = plt_power(
+            input, output[:, skip_chan:], target[:, skip_chan:],
+            label=['in', 'out', 'tgt'],
+        )
+        logger.add_figure('fig/train/power/eul', fig, global_step=epoch+1)
+        fig.clf()
 
         #fig = plt_power(
         #    input, output[:, skip_chan:], target[:, skip_chan:],
@@ -563,12 +566,15 @@ def validate(epoch, loader, model, criterion, adv_model, adv_criterion,
         logger.add_figure('fig/val', fig, global_step=epoch+1)
         fig.clf()
 
-        #fig = plt_power(
-        #    input, output[:, skip_chan:], target[:, skip_chan:],
-        #    label=['in', 'out', 'tgt'],
-        #)
-        #logger.add_figure('fig/val/power/lag', fig, global_step=epoch+1)
-        #fig.clf()
+        
+        
+
+        fig = plt_power(
+            input, output[:, skip_chan:], target[:, skip_chan:],
+            label=['in', 'out', 'tgt'],
+        )
+        logger.add_figure('fig/val/power/eul', fig, global_step=epoch+1)
+        fig.clf()
 
         #fig = plt_power(
         #    input, output[:, skip_chan:], target[:, skip_chan:],
