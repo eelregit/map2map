@@ -34,9 +34,9 @@ class G2(nn.Module):
                 SkipBlock(prev_chan, next_chan, out_chan, cat_noise))
 
     def forward(self, x):
+        y = x
         x = self.block0(x)
 
-        y = None
         for block in self.blocks:
             x, y = block(x, y)
 
