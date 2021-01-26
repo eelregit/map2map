@@ -3,6 +3,7 @@ from pprint import pprint
 import numpy as np
 import torch
 from torch.utils.data import DataLoader
+import os
 
 from .data import FieldDataset, norms
 from . import models
@@ -50,6 +51,9 @@ def test(args):
     device = torch.device('cpu')
     state = torch.load(args.load_state, map_location=device)
     epoch_number = state['epoch']
+    os.mkdir('npz_files/epoch_' + str(epoch_number))
+    os.mkdir('npz_files/epoch_' + str(epoch_number) + '/data')
+    os.mkdir('npz_files/epoch_' + str(epoch_number) + '/images')
     load_model_state_dict(model, state['model'], strict=args.load_state_strict)
     print('model state at epoch {} loaded from {}'.format(
         state['epoch'], args.load_state))
@@ -81,5 +85,5 @@ def test(args):
                     norm(target[:, start:stop], undo=True)
                     start = stop
 
-            np.savez('npz_files/Epoch' + str(epoch_number) +'-sample' + '{}.npz'.format(i), input=input.numpy(),
+            np.savez('npz_files/epoch_' + str(epoch_number) +'/data/sample' + '{}.npz'.format(i), input=input.numpy(),
                     output=output.numpy(), target=target.numpy())

@@ -33,7 +33,7 @@ m2m.py train \
     --criterion MSELoss \
     --cgan --adv-start 5 \
     --adv-wgan-gp-interval 1 \
-    --lr 1e-4 --optimizer-args '{"betas": [0, 0.99]}' \
+    --lr 1e-5 --optimizer-args '{"betas": [0, 0.99]}' \
     --adv-lr 1e-5 \
     --batch-size 1 --loader-workers 32 \
     --epochs 1000 \

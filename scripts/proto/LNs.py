@@ -1,7 +1,7 @@
 import torch
 
 
-def LRG(x, eps=1e-40, undo=False, med = -7.57):
+def LRG(x, eps=1e-10, undo=False, med = -7.57):
     if not undo:
         #print('LRG: Before the norm: max is: ' + str(torch.max(x)) + " | Median is: " + str(torch.median(x)))
         torch.log(x + eps, out=x)
@@ -12,7 +12,7 @@ def LRG(x, eps=1e-40, undo=False, med = -7.57):
         torch.add(x, med, out=x)
         torch.exp(x, out=x)
 
-def LRD(x, eps=1e-40, undo=False, med = -6.11):
+def LRD(x, eps=1e-10, undo=False, med = -6.11):
     if not undo:
         #print('LRD: Before the norm: max is: ' + str(torch.max(x)) + " | Median is: " + str(torch.median(x)))
         torch.log(x + eps, out=x)
@@ -24,7 +24,7 @@ def LRD(x, eps=1e-40, undo=False, med = -6.11):
         torch.exp(x, out=x)
 
 
-def HRG(x, eps=1e-40, undo=False, med = -15.28):
+def HRG(x, eps=1e-10, undo=False, med = -15.28):
     if not undo:
         #print('HRG: Before the norm: max is: ' + str(torch.max(x)) + " | Median is: " + str(torch.median(x)))
         torch.log(x + eps, out=x)
@@ -35,7 +35,7 @@ def HRG(x, eps=1e-40, undo=False, med = -15.28):
         torch.add(x, med, out=x)
         torch.exp(x, out=x)
 
-def HRD(x, eps=1e-40, undo=False, med = -14.03):
+def HRD(x, eps=1e-10, undo=False, med = -14.03):
     if not undo:
         #print('HRD: Before the norm: max is: ' + str(torch.max(x)) + " | Median is: " + str(torch.median(x)))
         torch.log(x + eps, out=x)

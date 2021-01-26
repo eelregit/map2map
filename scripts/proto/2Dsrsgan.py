@@ -34,12 +34,11 @@ class G2(nn.Module):
                 SkipBlock(prev_chan, next_chan, out_chan, cat_noise))
 
     def forward(self, x):
-        y = x
         x = self.block0(x)
-
-        for block in self.blocks:
+        x, y = self.blocks[0](x, None)
+        y = y * 0
+        for block in self.blocks[1:  ]:
             x, y = block(x, y)
-
         return y
 
 
@@ -135,7 +134,7 @@ class AddNoise(nn.Module):
 
 
 class D2(nn.Module):
-    def __init__(self, in_chan, out_chan, scale_factor=16,
+    def __init__(self, in_chan, out_chan, scale_factor=8,
                  chan_base=512, chan_min=64, chan_max=512):
         super().__init__()
 
@@ -164,10 +163,28 @@ class D2(nn.Module):
             self.blocks.append(ResBlock(prev_chan, next_chan))
 
         self.block9 = nn.Sequential(
-            nn.Conv2d(chan(0), chan(-1), 1),
-            nn.LeakyReLU(0.2, True),
-            nn.Conv2d(chan(-1), 1, 1),
-        )
+            #input shape is chan(0) x in_size/scale_factor x in_size/scale_factor
+            #with current config that is 512 x 64 x 64
+            nn.Conv2d(chan(0), chan(0), kernel_size=4, stride = 2, padding=1),
+            nn.LeakyReLU(0.2, inplace=True),
+
+            #input shape =  chan(0) x 32 x 32
+            nn.Conv2d(chan(0), chan(0), kernel_size=4, stride = 2, padding=1),
+            nn.LeakyReLU(0.2, inplace=True),
+
+            #input shape =  chan(0) x 16 x 16
+            nn.Conv2d(chan(0), chan(0), kernel_size=4, stride = 2, padding=1),
+            nn.LeakyReLU(0.2, inplace=True),
+
+            #input shape =  chan(0) x 8 x 8
+            nn.Conv2d(chan(0), chan(0), kernel_size=4, stride = 2, padding=1),
+            nn.LeakyReLU(0.2, inplace=True),
+
+            #input shape =  chan(0) x 4 x 4
+            nn.Conv2d(chan(0), 1, kernel_size=4, stride = 1, padding=0),
+            #output shape = 1x1x1
+            
+            )
 
     def forward(self, x):
         x = self.block0(x)
