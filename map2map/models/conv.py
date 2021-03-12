@@ -56,7 +56,7 @@ class ConvBlock(nn.Module):
         elif l == 'A':
             return nn.LeakyReLU()
         else:
-            raise NotImplementedError('layer type {} not supported'.format(l))
+            raise ValueError('layer type {} not supported'.format(l))
 
     def _setup_conv(self):
         self.idx_conv += 1
