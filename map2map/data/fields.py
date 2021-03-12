@@ -109,14 +109,20 @@ class FieldDataset(Dataset):
         )], axis=-1).reshape(-1, self.ndim)
         self.ncrop = len(self.anchors)
 
-        assert isinstance(in_pad, int) and isinstance(tgt_pad, int), \
-               'only support symmetric padding for now'
-        self.in_pad = np.broadcast_to(in_pad, (self.ndim, 2))
-        self.tgt_pad = np.broadcast_to(tgt_pad, (self.ndim, 2))
+        def format_pad(pad, ndim):
+            if isinstance(pad, int):
+                pad = np.broadcast_to(pad, ndim * 2)
+            elif isinstance(pad, tuple) and len(pad) == ndim:
+                pad = np.repeat(pad, 2)
+            elif isinstance(pad, tuple) and len(pad) == ndim * 2:
+                pad = np.array(pad)
+            else:
+                raise ValueError('pad and ndim mismatch')
+            return pad.reshape(ndim, 2)
+        self.in_pad = format_pad(in_pad, self.ndim)
+        self.tgt_pad = format_pad(tgt_pad, self.ndim)
 
-        assert isinstance(scale_factor, int) and scale_factor >= 1, \
-               'only support integer upsampling'
-        if scale_factor > 1:
+        if scale_factor != 1:
             tgt_size = np.load(self.tgt_files[0][0], mmap_mode='r').shape[1:]
             if any(self.size * scale_factor != tgt_size):
                 raise ValueError('input size x scale factor != target size')
