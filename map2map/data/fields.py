@@ -46,7 +46,7 @@ class FieldDataset(Dataset):
                  augment=False, aug_shift=None, aug_add=None, aug_mul=None,
                  crop=None, crop_start=None, crop_stop=None, crop_step=None,
                  in_pad=0, tgt_pad=0, scale_factor=1):
-        self.param_files = sorted(param_pattern)
+        self.param_files = sorted(glob(param_pattern))
 
         in_file_lists = [sorted(glob(p)) for p in in_patterns]
         self.in_files = list(zip(* in_file_lists))
@@ -61,6 +61,7 @@ class FieldDataset(Dataset):
         if self.nfile == 0:
             raise FileNotFoundError('file not found for {}'.format(in_patterns))
 
+        self.param_dim = np.loadtxt(self.param_files[0]).shape[0]
         self.in_chan = [np.load(f, mmap_mode='r').shape[0]
                         for f in self.in_files[0]]
         self.tgt_chan = [np.load(f, mmap_mode='r').shape[0]
@@ -143,7 +144,7 @@ class FieldDataset(Dataset):
     def __getitem__(self, idx):
         ifile, icrop = divmod(idx, self.ncrop)
 
-        params = np.loadtxt(self.param_files[idx])
+        params = np.loadtxt(self.param_files[ifile])
         in_fields = [np.load(f) for f in self.in_files[ifile]]
         tgt_fields = [np.load(f) for f in self.tgt_files[ifile]]
 
@@ -159,6 +160,7 @@ class FieldDataset(Dataset):
                           self.tgt_pad,
                           self.size * self.scale_factor)
 
+        params = torch.from_numpy(params).to(torch.float32)
         in_fields = [torch.from_numpy(f).to(torch.float32) for f in in_fields]
         tgt_fields = [torch.from_numpy(f).to(torch.float32) for f in tgt_fields]
 

@@ -59,6 +59,7 @@ def gpu_worker(local_rank, node, args):
     dist_init(rank, args)
 
     train_dataset = FieldDataset(
+        param_pattern=args.train_param_pattern,
         in_patterns=args.train_in_patterns,
         tgt_patterns=args.train_tgt_patterns,
         in_norms=args.in_norms,
@@ -90,6 +91,7 @@ def gpu_worker(local_rank, node, args):
 
     if args.val:
         val_dataset = FieldDataset(
+            param_pattern=args.val_param_pattern,
             in_patterns=args.val_in_patterns,
             tgt_patterns=args.val_tgt_patterns,
             in_norms=args.in_norms,
@@ -119,10 +121,12 @@ def gpu_worker(local_rank, node, args):
             pin_memory=True,
         )
 
-    args.in_chan, args.out_chan = train_dataset.in_chan, train_dataset.tgt_chan
+    args.param_dim = train_dataset.param_dim
+    args.in_chan = train_dataset.in_chan
+    args.out_chan = train_dataset.tgt_chan
 
     model = import_attr(args.model, models, callback_at=args.callback_at)
-    model = model(sum(args.in_chan), sum(args.out_chan),
+    model = model(args.param_dim, sum(args.in_chan), sum(args.out_chan),
                   scale_factor=args.scale_factor)
     model.to(device)
     model = DistributedDataParallel(model, device_ids=[device],
@@ -238,14 +242,16 @@ def train(epoch, loader, model, criterion,
 
     epoch_loss = torch.zeros(3, dtype=torch.float64, device=device)
 
-    for i, (input, target) in enumerate(loader):
+    for i, (param, input, target) in enumerate(loader):
         batch = epoch * len(loader) + i + 1
 
+        param = param.to(device, non_blocking=True)
         input = input.to(device, non_blocking=True)
         target = target.to(device, non_blocking=True)
 
-        output = model(input)
+        output = model(input, param)
         if batch == 1 and rank == 0:
+            print('param shape :', param.shape)
             print('input shape :', input.shape)
             print('output shape :', output.shape)
             print('target shape :', target.shape)
@@ -330,11 +336,12 @@ def validate(epoch, loader, model, criterion, logger, device, args):
     epoch_loss = torch.zeros(3, dtype=torch.float64, device=device)
 
     with torch.no_grad():
-        for input, target in loader:
+        for param, input, target in loader:
+            param = param.to(device, non_blocking=True)
             input = input.to(device, non_blocking=True)
             target = target.to(device, non_blocking=True)
 
-            output = model(input)
+            output = model(input, param)
 
             if (hasattr(model.module, 'scale_factor')
                     and model.module.scale_factor != 1):

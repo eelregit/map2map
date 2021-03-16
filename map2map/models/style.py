@@ -82,7 +82,7 @@ class ConvElr3d(nn.Module):
         return x
 
 
-class ConvMod3d(nn.Module):
+class ConvStyled3d(nn.Module):
     """Convolution layer with modulation and demodulation, from StyleGAN2.
 
     Weight and bias initialization from `torch.nn._ConvNd.reset_parameters()`.
@@ -158,6 +158,22 @@ class ConvMod3d(nn.Module):
         x = x.reshape(1, N * Cin, *DHWin)
         x = self.conv(x, w, bias=self.bias, stride=self.stride, groups=N)
         _, _, *DHWout = x.shape
-        x = x.reshape(N, Cout, *DHWout)
+       	x = x.reshape(N, Cout, *DHWout)
 
         return x
+
+class BatchNormStyled3d(nn.BatchNorm3d) :
+    """ Trivially does standard batch normalization, but accepts second argument
+
+    for style array that is not used
+    """
+    def forward(self, x, s):
+        return super().forward(x)
+
+class LeakyReLUStyled(nn.LeakyReLU):
+    """ Trivially evaluates standard leaky ReLU, but accepts second argument
+
+    for sytle array that is not used
+    """
+    def forward(self, x, s):
+        return super().forward(x)
