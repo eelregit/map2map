@@ -26,8 +26,13 @@ hostname; pwd; date
 
 
 # set computing environment, e.g. with module or anaconda
+
 #module load python
+#module list
+
 #source $HOME/anaconda3/bin/activate pytorch_env
+#conda info
+
 
 srun m2m.py train \
     --train-in-patterns "train/R0-*.npy,train/R1-*.npy" \
