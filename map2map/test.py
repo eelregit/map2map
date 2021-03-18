@@ -4,7 +4,8 @@ import numpy as np
 import torch
 from torch.utils.data import DataLoader
 
-from .data import FieldDataset, norms
+from .data import FieldDataset
+from .data import norms
 from . import models
 from .models import narrow_cast
 from .utils import import_attr, load_model_state_dict

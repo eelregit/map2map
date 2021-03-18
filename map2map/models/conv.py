@@ -3,7 +3,6 @@ import torch
 import torch.nn as nn
 
 from .narrow import narrow_like
-from .swish import Swish
 
 
 class ConvBlock(nn.Module):

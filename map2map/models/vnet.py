@@ -35,7 +35,10 @@ class VNet(nn.Module):
         self.up_r0 = ConvBlock(64, seq='UBA')
         self.conv_r0 = ResBlock(128, out_chan, seq='CAC')
 
-        self.bypass = in_chan == out_chan
+        if bypass is None:
+            self.bypass = in_chan == out_chan
+        else:
+            self.bypass = bypass
 
     def forward(self, x):
         if self.bypass:
