@@ -27,7 +27,10 @@ class StyledVNet(nn.Module):
         self.up_r0 = ConvStyledBlock(style_size, 64, seq='UBA')
         self.conv_r0 = ResStyledBlock(style_size, 128, out_chan, seq='CAC')
 
-        self.bypass = in_chan == out_chan
+        if bypass is None:
+            self.bypass = in_chan == out_chan
+        else:
+            self.bypass = bypass
 
     def forward(self, x, s):
         if self.bypass:
