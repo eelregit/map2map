@@ -397,8 +397,7 @@ def dist_init(rank, args):
 
         with open(dist_file, mode='w') as f:
             f.write(args.dist_addr)
-
-    if rank != 0:
+    else:
         while not os.path.exists(dist_file):
             time.sleep(1)
 
