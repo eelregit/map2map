@@ -14,8 +14,12 @@ hostname; pwd; date
 
 
 # set computing environment, e.g. with module or anaconda
+
 #module load python
+#module list
+
 #source $HOME/anaconda3/bin/activate pytorch_env
+#conda info
 
 
 export OMP_NUM_THREADS=$SLURM_CPUS_ON_NODE  # use MKL-DNN
