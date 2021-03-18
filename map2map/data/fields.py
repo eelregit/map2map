@@ -20,6 +20,8 @@ class FieldDataset(Dataset):
     `in_norms` is a list of of functions to normalize the input fields.
     Likewise for `tgt_norms`.
 
+    NOTE that vector fields are assumed if numbers of channels and dimensions are equal.
+
     Scalar and vector fields can be augmented by flipping and permutating the axes.
     In 3D these form the full octahedral symmetry, the Oh group of order 48.
     In 2D this is the dihedral group D4 of order 8.

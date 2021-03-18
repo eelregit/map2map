@@ -5,6 +5,7 @@ import torch
 from torch.utils.data import DataLoader
 
 from .data import FieldDataset
+from .data import norms
 from . import models
 from .models import narrow_cast
 from .utils import import_attr, load_model_state_dict
@@ -68,11 +69,13 @@ def test(args):
             if args.in_norms is not None:
                 start = 0
                 for norm, stop in zip(test_dataset.in_norms, np.cumsum(in_chan)):
+                    norm = import_attr(norm, norms, callback_at=args.callback_at)
                     norm(input[:, start:stop], undo=True)
                     start = stop
             if args.tgt_norms is not None:
                 start = 0
                 for norm, stop in zip(test_dataset.tgt_norms, np.cumsum(out_chan)):
+                    norm = import_attr(norm, norms, callback_at=args.callback_at)
                     norm(output[:, start:stop], undo=True)
                     norm(target[:, start:stop], undo=True)
                     start = stop
