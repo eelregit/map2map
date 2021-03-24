@@ -1,5 +1,6 @@
 import sys
 from pprint import pprint
+from collections import Counter
 import numpy as np
 import torch
 from torch.utils.data import DataLoader
@@ -55,6 +56,8 @@ def test(args):
         state['epoch'], args.load_state))
     del state
 
+    assembled_counts = Counter()
+
     model.eval()
 
     with torch.no_grad():
@@ -80,5 +83,13 @@ def test(args):
                     norm(target[:, start:stop], undo=True)
                     start = stop
 
-            np.savez('{}.npz'.format(i), input=input.numpy(),
-                    output=output.numpy(), target=target.numpy())
+            assembled_fields = test_dataset.assemble(
+                #input=input.numpy(),
+                output=output.numpy(),
+                #target=target.numpy(),
+            )
+
+            if assembled_fields:
+                for k, v in assembled_fields.items():
+                    np.save(f'{k}_{assembled_counts[k]}.npy', v)
+                    assembled_counts[k] += 1
