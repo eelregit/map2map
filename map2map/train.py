@@ -317,8 +317,10 @@ def train(epoch, loader, model, criterion, optimizer, scheduler,
     adv_real = torch.full([1], args.adv_label_smoothing, dtype=torch.float32,
             device=device)
 
-    for i, (input, target) in enumerate(loader):
+    for i, data in enumerate(loader):
         batch = epoch * len(loader) + i + 1
+
+        input, target = data['input'], data['target']
 
         input = input.to(device, non_blocking=True)
         target = target.to(device, non_blocking=True)
@@ -498,7 +500,9 @@ def validate(epoch, loader, model, criterion, adv_model, adv_criterion,
     real = torch.ones([1], dtype=torch.float32, device=device)
 
     with torch.no_grad():
-        for input, target in loader:
+        for data in loader:
+            input, target = data['input'], data['target']
+
             input = input.to(device, non_blocking=True)
             target = target.to(device, non_blocking=True)
 
