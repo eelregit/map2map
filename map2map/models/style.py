@@ -158,7 +158,7 @@ class ConvStyled3d(nn.Module):
         x = x.reshape(1, N * Cin, *DHWin)
         x = self.conv(x, w, bias=self.bias, stride=self.stride, groups=N)
         _, _, *DHWout = x.shape
-       	x = x.reshape(N, Cout, *DHWout)
+        x = x.reshape(N, Cout, *DHWout)
 
         return x
 
