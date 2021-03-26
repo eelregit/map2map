@@ -242,8 +242,10 @@ def train(epoch, loader, model, criterion,
 
     epoch_loss = torch.zeros(3, dtype=torch.float64, device=device)
 
-    for i, (style, input, target) in enumerate(loader):
+    for i, data in enumerate(loader):
         batch = epoch * len(loader) + i + 1
+
+        style, input, target = data['style'], data['input'], data['target']
 
         style = style.to(device, non_blocking=True)
         input = input.to(device, non_blocking=True)
@@ -336,7 +338,9 @@ def validate(epoch, loader, model, criterion, logger, device, args):
     epoch_loss = torch.zeros(3, dtype=torch.float64, device=device)
 
     with torch.no_grad():
-        for style, input, target in loader:
+        for data in loader:
+            style, input, target = data['style'], data['input'], data['target']
+
             style = style.to(device, non_blocking=True)
             input = input.to(device, non_blocking=True)
             target = target.to(device, non_blocking=True)

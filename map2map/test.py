@@ -1,6 +1,5 @@
 import sys
 from pprint import pprint
-from collections import Counter
 import numpy as np
 import torch
 from torch.utils.data import DataLoader
@@ -59,12 +58,12 @@ def test(args):
         state['epoch'], args.load_state))
     del state
 
-    assembled_counts = Counter()
-
     model.eval()
 
     with torch.no_grad():
-        for i, (style, input, target) in enumerate(test_loader):
+        for i, data in enumerate(test_loader):
+            style, input, target = data['style'], data['input'], data['target']
+
             output = model(input, style)
             input, output, target = narrow_cast(input, output, target)
 
@@ -72,27 +71,23 @@ def test(args):
 
             print('sample {} loss: {}'.format(i, loss.item()))
 
-            if args.in_norms is not None:
-                start = 0
-                for norm, stop in zip(test_dataset.in_norms, np.cumsum(in_chan)):
-                    norm = import_attr(norm, norms, callback_at=args.callback_at)
-                    norm(input[:, start:stop], undo=True)
-                    start = stop
+            #if args.in_norms is not None:
+            #    start = 0
+            #    for norm, stop in zip(test_dataset.in_norms, np.cumsum(in_chan)):
+            #        norm = import_attr(norm, norms, callback_at=args.callback_at)
+            #        norm(input[:, start:stop], undo=True)
+            #        start = stop
             if args.tgt_norms is not None:
                 start = 0
                 for norm, stop in zip(test_dataset.tgt_norms, np.cumsum(out_chan)):
                     norm = import_attr(norm, norms, callback_at=args.callback_at)
                     norm(output[:, start:stop], undo=True)
-                    norm(target[:, start:stop], undo=True)
+                    #norm(target[:, start:stop], undo=True)
                     start = stop
 
-            assembled_fields = test_dataset.assemble(
-                #input=input.numpy(),
-                output=output.numpy(),
-                #target=target.numpy(),
-            )
-
-            if assembled_fields:
-                for k, v in assembled_fields.items():
-                    np.save(f'{k}_{assembled_counts[k]}.npy', v)
-                    assembled_counts[k] += 1
+            #test_dataset.assemble('_in', in_chan, input,
+            #                      data['input_relpath'])
+            test_dataset.assemble('_out', out_chan, output,
+                                  data['target_relpath'])
+            #test_dataset.assemble('_tgt', out_chan, target,
+            #                      data['target_relpath'])
