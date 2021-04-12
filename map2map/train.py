@@ -247,7 +247,8 @@ def train(epoch, loader, model, criterion,
         target = target.to(device, non_blocking=True)
 
         output = model(input)
-        if batch == 1 and rank == 0:
+        if batch <= 5 and rank == 0:
+            print('##### batch :', batch)
             print('input shape :', input.shape)
             print('output shape :', output.shape)
             print('target shape :', target.shape)
@@ -256,7 +257,7 @@ def train(epoch, loader, model, criterion,
                 and model.module.scale_factor != 1):
             input = resample(input, model.module.scale_factor, narrow=False)
         input, output, target = narrow_cast(input, output, target)
-        if batch == 1 and rank == 0:
+        if batch <= 5 and rank == 0:
             print('narrowed shape :', output.shape, flush=True)
 
         lag_out, lag_tgt = output, target
