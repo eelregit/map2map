@@ -161,7 +161,7 @@ tensorboard --logdir PATH --samples_per_plugin images=IMAGES --port PORT
 * Use `.` as `PATH` in the training directory, or use the path to some parent
   directory for tensorboard to search recursively for multiple jobs.
 * Show `IMAGES` images, or all of them by setting it to 0.
-* Pick a free `PORT`. For remote jobs, do ssh port forwarding. Use `--bind_all` if port forwarding fails.
+* Pick a free `PORT`. For remote jobs, do ssh port forwarding.
 
 
 ### Customization
