@@ -306,6 +306,14 @@ def train(epoch, loader, model, criterion, optimizer, scheduler,
     rank = dist.get_rank()
     world_size = dist.get_world_size()
 
+    if (args.log_interval <= args.adv_r1_reg_interval
+        or args.adv_r1_reg_interval < 1):
+        adv_r1_reg_log_interval = args.log_interval
+    else:
+        adv_r1_reg_log_interval = (
+            args.log_interval // args.adv_r1_reg_interval
+            * args.adv_r1_reg_interval)
+
     # loss, loss_adv, adv_loss, adv_loss_fake, adv_loss_real
     # loss: generator (model) supervised loss
     # loss_adv: generator (model) adversarial loss
@@ -339,7 +347,7 @@ def train(epoch, loader, model, criterion, optimizer, scheduler,
             print('narrowed shape :', output.shape, flush=True)
 
         loss = criterion(output, target)
-        epoch_loss[0] += loss.item()
+        epoch_loss[0] += loss.detach()
 
         if args.adv and epoch >= args.adv_start:
             noise_std = args.instance_noise.std()
@@ -359,19 +367,19 @@ def train(epoch, loader, model, criterion, optimizer, scheduler,
 
             score_out = adv_model(output.detach())
             adv_loss_fake = adv_criterion(score_out, fake.expand_as(score_out))
-            epoch_loss[3] += adv_loss_fake.item()
+            epoch_loss[3] += adv_loss_fake.detach()
 
             adv_optimizer.zero_grad()
             adv_loss_fake.backward()
 
             score_tgt = adv_model(target)
             adv_loss_real = adv_criterion(score_tgt, adv_real.expand_as(score_tgt))
-            epoch_loss[4] += adv_loss_real.item()
+            epoch_loss[4] += adv_loss_real.detach()
 
             adv_loss_real.backward()
 
             adv_loss = adv_loss_fake + adv_loss_real
-            epoch_loss[2] += adv_loss.item()
+            epoch_loss[2] += adv_loss.detach()
 
             if (args.adv_r1_reg_interval > 0
                 and  batch % args.adv_r1_reg_interval == 0):
@@ -385,7 +393,7 @@ def train(epoch, loader, model, criterion, optimizer, scheduler,
 
                 adv_loss_reg_.backward()
 
-                if rank == 0:
+                if batch % adv_r1_reg_log_interval == 0 and rank == 0:
                     logger.add_scalar(
                         'loss/batch/train/adv/reg',
                         adv_loss_reg.item(),
@@ -400,7 +408,7 @@ def train(epoch, loader, model, criterion, optimizer, scheduler,
 
             score_out = adv_model(output)
             loss_adv = adv_criterion(score_out, real.expand_as(score_out))
-            epoch_loss[1] += loss_adv.item()
+            epoch_loss[1] += loss_adv.detach()
 
             optimizer.zero_grad()
             loss_adv.backward()
@@ -518,7 +526,7 @@ def validate(epoch, loader, model, criterion, adv_model, adv_criterion,
             input, output, target = narrow_cast(input, output, target)
 
             loss = criterion(output, target)
-            epoch_loss[0] += loss.item()
+            epoch_loss[0] += loss.detach()
 
             if args.adv and epoch >= args.adv_start:
                 if args.cgan:
@@ -528,18 +536,18 @@ def validate(epoch, loader, model, criterion, adv_model, adv_criterion,
                 # discriminator
                 score_out = adv_model(output)
                 adv_loss_fake = adv_criterion(score_out, fake.expand_as(score_out))
-                epoch_loss[3] += adv_loss_fake.item()
+                epoch_loss[3] += adv_loss_fake.detach()
 
                 score_tgt = adv_model(target)
                 adv_loss_real = adv_criterion(score_tgt, real.expand_as(score_tgt))
-                epoch_loss[4] += adv_loss_real.item()
+                epoch_loss[4] += adv_loss_real.detach()
 
                 adv_loss = adv_loss_fake + adv_loss_real
-                epoch_loss[2] += adv_loss.item()
+                epoch_loss[2] += adv_loss.detach()
 
                 # generator adversarial loss
                 loss_adv = adv_criterion(score_out, real.expand_as(score_out))
-                epoch_loss[1] += loss_adv.item()
+                epoch_loss[1] += loss_adv.detach()
 
     dist.all_reduce(epoch_loss)
     epoch_loss /= len(loader) * world_size
@@ -646,5 +654,5 @@ def get_grads(model):
     grads = list(p.grad for n, p in model.named_parameters()
                  if '.weight' in n)
     grads = [grads[0], grads[-1]]
-    grads = [g.detach().norm().item() for g in grads]
+    grads = [g.detach().norm() for g in grads]
     return grads
