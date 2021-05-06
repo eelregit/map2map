@@ -15,8 +15,7 @@ setup(
         'torch>=1.2',
         'numpy',
         'scipy',
+        'matplotlib',
+        'tensorboard',
     ],
-    extras_require={
-        "visualization":  ["tensorboard"],
-    },
 )
