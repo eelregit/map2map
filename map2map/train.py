@@ -76,6 +76,7 @@ def gpu_worker(local_rank, node, args):
         in_pad=args.in_pad,
         tgt_pad=args.tgt_pad,
         scale_factor=args.scale_factor,
+        **args.misc_kwargs,
     )
     train_sampler = DistFieldSampler(train_dataset, shuffle=True,
                                      div_data=args.div_data,
@@ -108,6 +109,7 @@ def gpu_worker(local_rank, node, args):
             in_pad=args.in_pad,
             tgt_pad=args.tgt_pad,
             scale_factor=args.scale_factor,
+            **args.misc_kwargs,
         )
         val_sampler = DistFieldSampler(val_dataset, shuffle=False,
                                        div_data=args.div_data,
@@ -127,7 +129,7 @@ def gpu_worker(local_rank, node, args):
 
     model = import_attr(args.model, models, callback_at=args.callback_at)
     model = model(args.style_size, sum(args.in_chan), sum(args.out_chan),
-                  scale_factor=args.scale_factor)
+                  scale_factor=args.scale_factor, **args.misc_kwargs)
     model.to(device)
     model = DistributedDataParallel(model, device_ids=[device],
             process_group=dist.new_group())
@@ -314,16 +316,18 @@ def train(epoch, loader, model, criterion,
                        eul_out[-1], eul_tgt[-1], eul_out[-1] - eul_tgt[-1],
             title=['in', 'lag_out', 'lag_tgt', 'lag_out - lag_tgt',
                          'eul_out', 'eul_tgt', 'eul_out - eul_tgt'],
+            **args.misc_kwargs,
         )
         logger.add_figure('fig/train', fig, global_step=epoch+1)
         fig.clf()
 
-        #fig = plt_power(input, lag_out, lag_tgt, label=['in', 'out', 'tgt'])
+        #fig = plt_power(input, lag_out, lag_tgt, label=['in', 'out', 'tgt'],
+        #                **args.misc_kwargs)
         #logger.add_figure('fig/train/power/lag', fig, global_step=epoch+1)
         #fig.clf()
 
         #fig = plt_power(input, lag_out, lag_tgt, l2e=True,
-        #                label=['in', 'out', 'tgt'])
+        #                label=['in', 'out', 'tgt'], **args.misc_kwargs)
         #logger.add_figure('fig/train/power/eul', fig, global_step=epoch+1)
         #fig.clf()
 
@@ -378,16 +382,18 @@ def validate(epoch, loader, model, criterion, logger, device, args):
                        eul_out[-1], eul_tgt[-1], eul_out[-1] - eul_tgt[-1],
             title=['in', 'lag_out', 'lag_tgt', 'lag_out - lag_tgt',
                          'eul_out', 'eul_tgt', 'eul_out - eul_tgt'],
+            **args.misc_kwargs,
         )
         logger.add_figure('fig/val', fig, global_step=epoch+1)
         fig.clf()
 
-        #fig = plt_power(input, lag_out, lag_tgt, label=['in', 'out', 'tgt'])
+        #fig = plt_power(input, lag_out, lag_tgt, label=['in', 'out', 'tgt'],
+        #                **args.misc_kwargs)
         #logger.add_figure('fig/val/power/lag', fig, global_step=epoch+1)
         #fig.clf()
 
         #fig = plt_power(input, lag_out, lag_tgt, l2e=True,
-        #                label=['in', 'out', 'tgt'])
+        #                label=['in', 'out', 'tgt'], **args.misc_kwargs)
         #logger.add_figure('fig/val/power/eul', fig, global_step=epoch+1)
         #fig.clf()
 

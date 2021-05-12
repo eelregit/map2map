@@ -8,7 +8,8 @@ from .resample import Resampler
 
 class G(nn.Module):
     def __init__(self, in_chan, out_chan, scale_factor=16,
-                 chan_base=512, chan_min=64, chan_max=512, cat_noise=False):
+                 chan_base=512, chan_min=64, chan_max=512, cat_noise=False,
+                 **kwargs):
         super().__init__()
 
         self.scale_factor = scale_factor
@@ -137,7 +138,8 @@ class AddNoise(nn.Module):
 
 class D(nn.Module):
     def __init__(self, in_chan, out_chan, scale_factor=16,
-                 chan_base=512, chan_min=64, chan_max=512):
+                 chan_base=512, chan_min=64, chan_max=512,
+                 **kwargs):
         super().__init__()
 
         self.scale_factor = scale_factor

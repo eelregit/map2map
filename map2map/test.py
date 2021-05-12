@@ -34,6 +34,7 @@ def test(args):
         in_pad=args.in_pad,
         tgt_pad=args.tgt_pad,
         scale_factor=args.scale_factor,
+        **args.misc_kwargs,
     )
     test_loader = DataLoader(
         test_dataset,
@@ -47,7 +48,8 @@ def test(args):
     out_chan = test_dataset.tgt_chan
 
     model = import_attr(args.model, models, callback_at=args.callback_at)
-    model = model(style_size, sum(in_chan), sum(out_chan), scale_factor=args.scale_factor)
+    model = model(style_size, sum(in_chan), sum(out_chan),
+                  scale_factor=args.scale_factor, **args.misc_kwargs)
     criterion = import_attr(args.criterion, torch.nn, callback_at=args.callback_at)
     criterion = criterion()
 
@@ -75,14 +77,14 @@ def test(args):
             #    start = 0
             #    for norm, stop in zip(test_dataset.in_norms, np.cumsum(in_chan)):
             #        norm = import_attr(norm, norms, callback_at=args.callback_at)
-            #        norm(input[:, start:stop], undo=True)
+            #        norm(input[:, start:stop], undo=True, **args.misc_kwargs)
             #        start = stop
             if args.tgt_norms is not None:
                 start = 0
                 for norm, stop in zip(test_dataset.tgt_norms, np.cumsum(out_chan)):
                     norm = import_attr(norm, norms, callback_at=args.callback_at)
-                    norm(output[:, start:stop], undo=True)
-                    #norm(target[:, start:stop], undo=True)
+                    norm(output[:, start:stop], undo=True, **args.misc_kwargs)
+                    #norm(target[:, start:stop], undo=True, **args.misc_kwargs)
                     start = stop
 
             #test_dataset.assemble('_in', in_chan, input,

@@ -89,7 +89,10 @@ def add_common_args(parser):
             help='directory of custorm code defining callbacks for models, '
             'norms, criteria, and optimizers. Disabled if not set. '
             'This is appended to the default locations, '
-            'thus has the lowest priority.')
+            'thus has the lowest priority')
+    parser.add_argument('--misc-kwargs', default='{}', type=json.loads,
+            help='miscellaneous keyword arguments for custom models and '
+            'norms. Be careful with name collisions')
 
 
 def add_train_args(parser):

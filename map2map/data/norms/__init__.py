@@ -1,2 +1,2 @@
-def identity(x, undo=False):
+def identity(x, undo=False, **kwargs):
     pass
