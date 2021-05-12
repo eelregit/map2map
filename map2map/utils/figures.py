@@ -122,26 +122,26 @@ def plt_slices(*fields, size=64, title=None, cmap=None, norm=None, **kwargs):
     return fig
 
 
-def plt_power(*fields, l2e=False, label=None, **kwargs):
+def plt_power(*fields, dis=None, label=None, **kwargs):
     """Plot power spectra of fields.
 
     Each field should have batch and channel dimensions followed by spatial
     dimensions.
 
-    Optionally the field can be transformed by lag2eul first.
+    Optionally the field can be transformed by lag2eul first if given `dis`.
 
     See `map2map.models.power`.
     """
     plt.close('all')
 
     if label is not None:
-        assert len(label) == len(fields)
+        assert len(label) == len(fields) or len(label) == len(dis)
     else:
         label = [None] * len(fields)
 
     with torch.no_grad():
-        if l2e:
-            fields = lag2eul(*fields, **kwargs)
+        if dis:
+            fields = lag2eul(dis, val=fields, **kwargs)
 
         ks, Ps = [], []
         for field in fields:

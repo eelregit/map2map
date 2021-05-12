@@ -493,9 +493,9 @@ def train(epoch, loader, model, criterion, optimizer, scheduler,
         #logger.add_figure('fig/train/power/lag', fig, global_step=epoch+1)
         #fig.clf()
 
-        #fig = plt_power(
-        #    input, output[:, skip_chan:], target[:, skip_chan:],
-        #    l2e=True, label=['in', 'out', 'tgt'],
+        #fig = plt_power(1.0,
+        #    dis=[input, output[:, skip_chan:], target[:, skip_chan:]],
+        #    label=['in', 'out', 'tgt'],
         #    **args.misc_kwargs,
         #)
         #logger.add_figure('fig/train/power/eul', fig, global_step=epoch+1)
@@ -594,9 +594,9 @@ def validate(epoch, loader, model, criterion, adv_model, adv_criterion,
         #logger.add_figure('fig/val/power/lag', fig, global_step=epoch+1)
         #fig.clf()
 
-        #fig = plt_power(
-        #    input, output[:, skip_chan:], target[:, skip_chan:],
-        #    l2e=True, label=['in', 'out', 'tgt'],
+        #fig = plt_power(1.0,
+        #    dis=[input, output[:, skip_chan:], target[:, skip_chan:]],
+        #    label=['in', 'out', 'tgt'],
         #    **args.misc_kwargs,
         #)
         #logger.add_figure('fig/val/power/eul', fig, global_step=epoch+1)
