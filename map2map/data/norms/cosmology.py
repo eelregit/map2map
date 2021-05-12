@@ -2,33 +2,21 @@ import numpy as np
 from scipy.special import hyp2f1
 
 
-def dis(x, undo=False):
-    z = 0  # FIXME
-    dis_norm = 6 * D(z)  # [Mpc/h]
+def dis(x, undo=False, z=0.0, dis_std=6.0, **kwargs):
+    dis_norm = dis_std * D(z)  # [Mpc/h]
 
     if not undo:
         dis_norm = 1 / dis_norm
 
     x *= dis_norm
 
-def vel(x, undo=False):
-    z = 0  # FIXME
-    vel_norm = 6 * D(z) * H(z) * f(z) / (1 + z)  # [km/s]
+def vel(x, undo=False, z=0.0, dis_std=6.0, **kwargs):
+    vel_norm = dis_std * D(z) * H(z) * f(z) / (1 + z)  # [km/s]
 
     if not undo:
         vel_norm = 1 / vel_norm
 
     x *= vel_norm
-
-def den(x, undo=False):
-    raise NotImplementedError
-    z = 0  # FIXME
-    den_norm = 0  # FIXME
-
-    if not undo:
-        den_norm = 1 / den_norm
-
-    x *= den_norm
 
 
 def D(z, Om=0.31):

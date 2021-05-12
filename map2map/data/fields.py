@@ -47,7 +47,8 @@ class FieldDataset(Dataset):
                  in_norms=None, tgt_norms=None, callback_at=None,
                  augment=False, aug_shift=None, aug_add=None, aug_mul=None,
                  crop=None, crop_start=None, crop_stop=None, crop_step=None,
-                 in_pad=0, tgt_pad=0, scale_factor=1):
+                 in_pad=0, tgt_pad=0, scale_factor=1,
+                 **kwargs):
         in_file_lists = [sorted(glob(p)) for p in in_patterns]
         self.in_files = list(zip(* in_file_lists))
 
@@ -135,6 +136,8 @@ class FieldDataset(Dataset):
 
         self.nsample = self.nfile * self.ncrop
 
+        self.kwargs = kwargs
+
         self.assembly_line = {}
 
         self.commonpath = os.path.commonpath(
@@ -182,11 +185,11 @@ class FieldDataset(Dataset):
         if self.in_norms is not None:
             for norm, x in zip(self.in_norms, in_fields):
                 norm = import_attr(norm, norms, callback_at=self.callback_at)
-                norm(x)
+                norm(x, **self.kwargs)
         if self.tgt_norms is not None:
             for norm, x in zip(self.tgt_norms, tgt_fields):
                 norm = import_attr(norm, norms, callback_at=self.callback_at)
-                norm(x)
+                norm(x, **self.kwargs)
 
         if self.augment:
             flip_axes = flip(in_fields, None, self.ndim)
