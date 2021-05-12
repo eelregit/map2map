@@ -1,7 +1,5 @@
 import torch
 
-from .lag2eul import lag2eul
-
 
 def power(x):
     """Compute power spectra of input fields

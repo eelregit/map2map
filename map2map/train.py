@@ -263,7 +263,7 @@ def train(epoch, loader, model, criterion,
             print('narrowed shape :', output.shape, flush=True)
 
         lag_out, lag_tgt = output, target
-        eul_out, eul_tgt = lag2eul(lag_out, lag_tgt)
+        eul_out, eul_tgt = lag2eul([lag_out, lag_tgt], **args.misc_kwargs)
 
         lag_loss = criterion(lag_out, lag_tgt)
         eul_loss = criterion(eul_out, eul_tgt)
@@ -320,8 +320,11 @@ def train(epoch, loader, model, criterion,
         #logger.add_figure('fig/train/power/lag', fig, global_step=epoch+1)
         #fig.clf()
 
-        #fig = plt_power(input, lag_out, lag_tgt, l2e=True,
-        #                label=['in', 'out', 'tgt'], **args.misc_kwargs)
+        #fig = plt_power(1.0,
+        #    dis=[input, lag_out, lag_tgt],
+        #    label=['in', 'out', 'tgt'],
+        #    **args.misc_kwargs,
+        #)
         #logger.add_figure('fig/train/power/eul', fig, global_step=epoch+1)
         #fig.clf()
 
@@ -351,7 +354,7 @@ def validate(epoch, loader, model, criterion, logger, device, args):
             input, output, target = narrow_cast(input, output, target)
 
             lag_out, lag_tgt = output, target
-            eul_out, eul_tgt = lag2eul(lag_out, lag_tgt)
+            eul_out, eul_tgt = lag2eul([lag_out, lag_tgt], **args.misc_kwargs)
 
             lag_loss = criterion(lag_out, lag_tgt)
             eul_loss = criterion(eul_out, eul_tgt)
@@ -385,8 +388,11 @@ def validate(epoch, loader, model, criterion, logger, device, args):
         #logger.add_figure('fig/val/power/lag', fig, global_step=epoch+1)
         #fig.clf()
 
-        #fig = plt_power(input, lag_out, lag_tgt, l2e=True,
-        #                label=['in', 'out', 'tgt'], **args.misc_kwargs)
+        #fig = plt_power(1.0,
+        #    dis=[input, lag_out, lag_tgt],
+        #    label=['in', 'out', 'tgt'],
+        #    **args.misc_kwargs,
+        #)
         #logger.add_figure('fig/val/power/eul', fig, global_step=epoch+1)
         #fig.clf()
 
