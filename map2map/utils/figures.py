@@ -14,7 +14,7 @@ def quantize(x):
     return 2 ** round(log2(x), ndigits=1)
 
 
-def plt_slices(*fields, size=64, title=None, cmap=None, norm=None):
+def plt_slices(*fields, size=64, title=None, cmap=None, norm=None, **kwargs):
     """Plot slices of fields of more than 2 spatial dimensions.
 
     Each field should have a channel dimension followed by spatial dimensions,
@@ -122,7 +122,7 @@ def plt_slices(*fields, size=64, title=None, cmap=None, norm=None):
     return fig
 
 
-def plt_power(*fields, l2e=False, label=None):
+def plt_power(*fields, l2e=False, label=None, **kwargs):
     """Plot power spectra of fields.
 
     Each field should have batch and channel dimensions followed by spatial
@@ -141,7 +141,7 @@ def plt_power(*fields, l2e=False, label=None):
 
     with torch.no_grad():
         if l2e:
-            fields = lag2eul(*fields)
+            fields = lag2eul(*fields, **kwargs)
 
         ks, Ps = [], []
         for field in fields:

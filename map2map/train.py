@@ -80,6 +80,7 @@ def gpu_worker(local_rank, node, args):
         in_pad=args.in_pad,
         tgt_pad=args.tgt_pad,
         scale_factor=args.scale_factor,
+        **args.misc_kwargs,
     )
     train_sampler = DistFieldSampler(train_dataset, shuffle=True,
                                      div_data=args.div_data,
@@ -111,6 +112,7 @@ def gpu_worker(local_rank, node, args):
             in_pad=args.in_pad,
             tgt_pad=args.tgt_pad,
             scale_factor=args.scale_factor,
+            **args.misc_kwargs,
         )
         val_sampler = DistFieldSampler(val_dataset, shuffle=False,
                                        div_data=args.div_data,
@@ -128,7 +130,7 @@ def gpu_worker(local_rank, node, args):
 
     model = import_attr(args.model, models, callback_at=args.callback_at)
     model = model(sum(args.in_chan), sum(args.out_chan),
-                  scale_factor=args.scale_factor)
+                  scale_factor=args.scale_factor, **args.misc_kwargs)
     model.to(device)
     model = DistributedDataParallel(model, device_ids=[device],
                                     process_group=dist.new_group())
@@ -155,7 +157,8 @@ def gpu_worker(local_rank, node, args):
             sum(args.in_chan + args.out_chan) if args.cgan
                 else sum(args.out_chan),
             1,
-            scale_factor=args.scale_factor
+            scale_factor=args.scale_factor,
+            **args.misc_kwargs,
         )
         if args.adv_model_spectral_norm:
             add_spectral_norm(adv_model)
@@ -477,6 +480,7 @@ def train(epoch, loader, model, criterion, optimizer, scheduler,
             input[-1], output[-1, skip_chan:], target[-1, skip_chan:],
             output[-1, skip_chan:] - target[-1, skip_chan:],
             title=['in', 'out', 'tgt', 'out - tgt'],
+            **args.misc_kwargs,
         )
         logger.add_figure('fig/train', fig, global_step=epoch+1)
         fig.clf()
@@ -484,6 +488,7 @@ def train(epoch, loader, model, criterion, optimizer, scheduler,
         #fig = plt_power(
         #    input, output[:, skip_chan:], target[:, skip_chan:],
         #    label=['in', 'out', 'tgt'],
+        #    **args.misc_kwargs,
         #)
         #logger.add_figure('fig/train/power/lag', fig, global_step=epoch+1)
         #fig.clf()
@@ -491,6 +496,7 @@ def train(epoch, loader, model, criterion, optimizer, scheduler,
         #fig = plt_power(
         #    input, output[:, skip_chan:], target[:, skip_chan:],
         #    l2e=True, label=['in', 'out', 'tgt'],
+        #    **args.misc_kwargs,
         #)
         #logger.add_figure('fig/train/power/eul', fig, global_step=epoch+1)
         #fig.clf()
@@ -575,6 +581,7 @@ def validate(epoch, loader, model, criterion, adv_model, adv_criterion,
             input[-1], output[-1, skip_chan:], target[-1, skip_chan:],
             output[-1, skip_chan:] - target[-1, skip_chan:],
             title=['in', 'out', 'tgt', 'out - tgt'],
+            **args.misc_kwargs,
         )
         logger.add_figure('fig/val', fig, global_step=epoch+1)
         fig.clf()
@@ -582,6 +589,7 @@ def validate(epoch, loader, model, criterion, adv_model, adv_criterion,
         #fig = plt_power(
         #    input, output[:, skip_chan:], target[:, skip_chan:],
         #    label=['in', 'out', 'tgt'],
+        #    **args.misc_kwargs,
         #)
         #logger.add_figure('fig/val/power/lag', fig, global_step=epoch+1)
         #fig.clf()
@@ -589,6 +597,7 @@ def validate(epoch, loader, model, criterion, adv_model, adv_criterion,
         #fig = plt_power(
         #    input, output[:, skip_chan:], target[:, skip_chan:],
         #    l2e=True, label=['in', 'out', 'tgt'],
+        #    **args.misc_kwargs,
         #)
         #logger.add_figure('fig/val/power/eul', fig, global_step=epoch+1)
         #fig.clf()
