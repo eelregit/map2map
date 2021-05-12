@@ -1,8 +1,12 @@
 import torch
 import torch.nn as nn
 
+from ..data.norms.cosmology import D
 
-def lag2eul(*xs, rm_dis_mean=True, periodic=False):
+
+def lag2eul(*xs, rm_dis_mean=True, periodic=False,
+            z=0.0, dis_std=6.0, boxsize=1000., meshsize=512,
+            **kwargs):
     """Transform fields from Lagrangian description to Eulerian description
 
     Only works for 3d fields, output same mesh size as input.
@@ -12,14 +16,15 @@ def lag2eul(*xs, rm_dis_mean=True, periodic=False):
     latter from Lagrangian to Eulerian positions and then "paint" with CIC
     (trilinear) scheme. Use 1 if the latter is empty.
 
+    Note that the box and mesh sizes don't have to be that of the inputs, as
+    long as their ratio gives the right resolution. One can therefore set them
+    to the values of the whole fields, and use smaller inputs.
+
     Implementation follows pmesh/cic.py by Yu Feng.
     """
-    # FIXME for other redshift, box and mesh sizes
-    from ..data.norms.cosmology import D
-    z = 0
-    Boxsize = 1000
-    Nmesh = 512
-    dis_norm = 6 * D(z) * Nmesh / Boxsize  # to mesh unit
+    # NOTE the following factor assumes normalized displacements
+    # and thus undoes it
+    dis_norm = dis_std * D(z) * meshsize / boxsize  # to mesh unit
 
     if any(x.dim() != 5 for x in xs):
         raise NotImplementedError('only support 3d fields for now')

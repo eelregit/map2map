@@ -133,9 +133,7 @@ The model `__init__` requires two positional arguments, the number of
 input and output channels.
 Other hyperparameters can be specified as keyword arguments, including
 the `scale_factor` useful for super-resolution tasks.
-Note that the `**kwargs` is necessary when `scale_factor` is not
-specified, because `scale_factor` is always passed when instantiating
-a model.
+Note that the `**kwargs` is necessary for compatibility.
 
 
 ### Training
