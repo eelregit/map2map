@@ -8,7 +8,7 @@ setup(
     author_email='eelregit@gmail.com',
     packages=find_packages(),
     scripts=[
-        'scripts/m2m.py',
+        'm2m.py',
     ],
     python_requires='>=3.6',
     install_requires=[
