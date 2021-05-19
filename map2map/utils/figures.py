@@ -62,12 +62,12 @@ def plt_slices(*fields, size=64, title=None, cmap=None, norm=None, **kwargs):
             w1, w2 = (h1 - l1) / 2, (h2 - l2) / 2
 
             if all_non_neg:
-                if h1 > 0.1 * h2:
+                if h1 > 0.1 * h2 or l2 == 0:
                     norm_col = Normalize(vmin=0, vmax=quantize(h2))
                 else:
                     norm_col = LogNorm(vmin=quantize(l2), vmax=quantize(h2))
             elif all_non_pos:
-                if l1 < 0.1 * l2:
+                if l1 < 0.1 * l2 or h2 == 0:
                     norm_col = Normalize(vmin=-quantize(-l2), vmax=0)
                 else:
                     norm_col = SymLogNorm(linthresh=quantize(-h2),
