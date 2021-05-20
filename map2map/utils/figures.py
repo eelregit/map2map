@@ -141,7 +141,7 @@ def plt_power(*fields, dis=None, label=None, **kwargs):
         label = [None] * len(fields)
 
     with torch.no_grad():
-        if dis:
+        if dis is not None:
             fields = lag2eul(dis, val=fields, **kwargs)
 
         ks, Ps = [], []
