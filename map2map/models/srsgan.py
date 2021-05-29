@@ -2,7 +2,7 @@ from math import log2
 import torch
 import torch.nn as nn
 
-from .narrow import narrow_by, narrow_like
+from .narrow import narrow_by
 from .resample import Resampler
 
 
@@ -32,21 +32,21 @@ class G(nn.Module):
         for b in range(num_blocks):
             prev_chan, next_chan = chan(b), chan(b+1)
             self.blocks.append(
-                SkipBlock(prev_chan, next_chan, out_chan, cat_noise))
+                HBlock(prev_chan, next_chan, out_chan, cat_noise))
 
     def forward(self, x):
-        y = x
+        y = x  # direct upsampling from the input
         x = self.block0(x)
 
-        #y = None
+        #y = None  # no direct upsampling from the input
         for block in self.blocks:
             x, y = block(x, y)
 
         return y
 
 
-class SkipBlock(nn.Module):
-    """The "I" block of the StyleGAN2 generator.
+class HBlock(nn.Module):
+    """The "H" block of the StyleGAN2 generator.
 
         x_p                     y_p
          |                       |
