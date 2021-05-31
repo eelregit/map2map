@@ -2,12 +2,14 @@
 
 #SBATCH --job-name=R2D2
 #SBATCH --output=%x-%j.out
-
 #SBATCH --partition=cpu_partition
-
+#SBATCH --nodes=1
 #SBATCH --exclusive
-#SBATCH --nodes=2
-#SBATCH --time=1-00:00:00
+##SBATCH --partition=gpu_partition
+##SBATCH --gres=gpu:1
+##SBATCH --ntasks=1
+##SBATCH --cpus-per-task=8
+#SBATCH --time=0-01:00:00
 
 
 hostname; pwd; date
@@ -20,9 +22,6 @@ hostname; pwd; date
 
 #source $HOME/anaconda3/bin/activate pytorch_env
 #conda info
-
-
-export OMP_NUM_THREADS=$SLURM_CPUS_ON_NODE  # use MKL-DNN
 
 
 m2m.py test \
