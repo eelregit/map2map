@@ -193,6 +193,10 @@ def add_test_args(parser):
     parser.add_argument('--test-tgt-patterns', type=str_list, required=True,
             help='comma-sep. list of glob patterns for test target data')
 
+    parser.add_argument('--num-threads', type=int,
+            help='number of CPU threads when cuda is unavailable. '
+            'Default is the number of CPUs on the node by slurm')
+
 
 def str_list(s):
     return s.split(',')
