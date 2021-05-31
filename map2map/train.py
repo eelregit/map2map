@@ -5,7 +5,6 @@ import sys
 from pprint import pprint
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 import torch.optim as optim
 import torch.distributed as dist
 from torch.multiprocessing import spawn
@@ -18,7 +17,7 @@ from . import models
 from .models import (
     narrow_cast, resample,
     grad_penalty_reg,
-    add_spectral_norm, rm_spectral_norm,
+    add_spectral_norm,
     InstanceNoise,
 )
 from .utils import import_attr, load_model_state_dict, plt_slices, plt_power
@@ -485,13 +484,13 @@ def train(epoch, loader, model, criterion, optimizer, scheduler,
         logger.add_figure('fig/train', fig, global_step=epoch+1)
         fig.clf()
 
-        #fig = plt_power(
-        #    input, output[:, skip_chan:], target[:, skip_chan:],
-        #    label=['in', 'out', 'tgt'],
-        #    **args.misc_kwargs,
-        #)
-        #logger.add_figure('fig/train/power/lag', fig, global_step=epoch+1)
-        #fig.clf()
+        fig = plt_power(
+            input, output[:, skip_chan:], target[:, skip_chan:],
+            label=['in', 'out', 'tgt'],
+            **args.misc_kwargs,
+        )
+        logger.add_figure('fig/train/power/lag', fig, global_step=epoch+1)
+        fig.clf()
 
         #fig = plt_power(1.0,
         #    dis=[input, output[:, skip_chan:], target[:, skip_chan:]],
@@ -586,13 +585,13 @@ def validate(epoch, loader, model, criterion, adv_model, adv_criterion,
         logger.add_figure('fig/val', fig, global_step=epoch+1)
         fig.clf()
 
-        #fig = plt_power(
-        #    input, output[:, skip_chan:], target[:, skip_chan:],
-        #    label=['in', 'out', 'tgt'],
-        #    **args.misc_kwargs,
-        #)
-        #logger.add_figure('fig/val/power/lag', fig, global_step=epoch+1)
-        #fig.clf()
+        fig = plt_power(
+            input, output[:, skip_chan:], target[:, skip_chan:],
+            label=['in', 'out', 'tgt'],
+            **args.misc_kwargs,
+        )
+        logger.add_figure('fig/val/power/lag', fig, global_step=epoch+1)
+        fig.clf()
 
         #fig = plt_power(1.0,
         #    dis=[input, output[:, skip_chan:], target[:, skip_chan:]],
