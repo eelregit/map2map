@@ -2,12 +2,10 @@
 
 #SBATCH --job-name=R2D2
 #SBATCH --output=%x-%j.out
-
 #SBATCH --partition=gpu_partition
-#SBATCH --gres=gpu:4
-
-#SBATCH --exclusive
 #SBATCH --nodes=2
+#SBATCH --gres=gpu:4
+#SBATCH --exclusive
 #SBATCH --time=1-00:00:00
 
 
