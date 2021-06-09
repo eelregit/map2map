@@ -61,6 +61,7 @@ class FieldDataset(Dataset):
 
         if self.nfile == 0:
             raise FileNotFoundError('file not found for {}'.format(in_patterns))
+        self.is_read_once = np.full(self.nfile, False)
 
         self.in_chan = [np.load(f, mmap_mode='r').shape[0]
                         for f in self.in_files[0]]
@@ -152,8 +153,17 @@ class FieldDataset(Dataset):
     def __getitem__(self, idx):
         ifile, icrop = divmod(idx, self.ncrop)
 
-        in_fields = [np.load(f) for f in self.in_files[ifile]]
-        tgt_fields = [np.load(f) for f in self.tgt_files[ifile]]
+        # use memmap after reading a file once
+        if self.is_read_once[ifile]:
+            mmap_mode = 'r'
+        else:
+            mmap_mode = None
+            self.is_read_once[ifile] = True
+
+        in_fields = [np.load(f, mmap_mode=mmap_mode)
+                     for f in self.in_files[ifile]]
+        tgt_fields = [np.load(f, mmap_mode=mmap_mode)
+                      for f in self.tgt_files[ifile]]
 
         anchor = self.anchors[icrop]
 
