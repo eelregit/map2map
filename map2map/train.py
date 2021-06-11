@@ -123,7 +123,7 @@ def gpu_worker(local_rank, node, args):
         )
 
     args.style_size = train_dataset.style_size
-    args.in_chan = train_dataset.in_chan
+    args.in_chan = train_dataset.in_chan[:1]
     args.out_chan = train_dataset.tgt_chan
 
     model = import_attr(args.model, models, callback_at=args.callback_at)
@@ -140,7 +140,17 @@ def gpu_worker(local_rank, node, args):
 
     optimizer = import_attr(args.optimizer, optim, callback_at=args.callback_at)
     optimizer = optimizer(
-        model.parameters(),
+        [
+            {
+                'params': (param for name, param in model.named_parameters()
+                           if 'mlp' in name or 'style' in name),
+                'betas': (0.9, 0.99), 'weight_decay': 1e-4,
+            },
+            {
+                'params': (param for name, param in model.named_parameters()
+                           if 'mlp' not in name and 'style' not in name),
+            },
+        ],
         lr=args.lr,
         **args.optimizer_args,
     )
@@ -206,7 +216,7 @@ def gpu_worker(local_rank, node, args):
             #epoch_loss = val_loss
 
         if args.reduce_lr_on_plateau:
-            scheduler.step(epoch_loss[2])
+            scheduler.step(epoch_loss[0] * epoch_loss[1])
 
         if rank == 0:
             logger.flush()
@@ -251,11 +261,13 @@ def train(epoch, loader, model, criterion,
         style = style.to(device, non_blocking=True)
         input = input.to(device, non_blocking=True)
         target = target.to(device, non_blocking=True)
+        input, dis = torch.split(input, 3, dim=1)
 
         output = model(input, style)
         if batch <= 5 and rank == 0:
             print('##### batch :', batch)
             print('style shape :', style.shape)
+            print('dis shape :', dis.shape)
             print('input shape :', input.shape)
             print('output shape :', output.shape)
             print('target shape :', target.shape)
@@ -263,12 +275,13 @@ def train(epoch, loader, model, criterion,
         if (hasattr(model.module, 'scale_factor')
                 and model.module.scale_factor != 1):
             input = resample(input, model.module.scale_factor, narrow=False)
-        input, output, target = narrow_cast(input, output, target)
+        input, output, target, dis = narrow_cast(input, output, target, dis)
         if batch <= 5 and rank == 0:
             print('narrowed shape :', output.shape)
 
         lag_out, lag_tgt = output, target
-        eul_out, eul_tgt = lag2eul([lag_out, lag_tgt], **args.misc_kwargs)
+        eul_out, eul_tgt = lag2eul(dis, val=[lag_out, lag_tgt],
+                                   **args.misc_kwargs)
         if batch <= 5 and rank == 0:
             print('Eulerian shape :', eul_out.shape, flush=True)
 
@@ -296,7 +309,7 @@ def train(epoch, loader, model, criterion,
                                   global_step=batch)
                 logger.add_scalar('loss/batch/train/eul', eul_loss.item(),
                                   global_step=batch)
-                logger.add_scalar('loss/batch/train/lxe', loss.item(),
+                logger.add_scalar('loss/batch/train/lxe', lag_loss.item() * eul_loss.item(),
                                   global_step=batch)
 
                 logger.add_scalar('grad/first', grads[0], global_step=batch)
@@ -309,7 +322,7 @@ def train(epoch, loader, model, criterion,
                           global_step=epoch+1)
         logger.add_scalar('loss/epoch/train/eul', epoch_loss[1],
                           global_step=epoch+1)
-        logger.add_scalar('loss/epoch/train/lxe', epoch_loss[2],
+        logger.add_scalar('loss/epoch/train/lxe', epoch_loss[0] * epoch_loss[1],
                           global_step=epoch+1)
 
         fig = plt_slices(
@@ -327,13 +340,13 @@ def train(epoch, loader, model, criterion,
         logger.add_figure('fig/train/power/lag', fig, global_step=epoch+1)
         fig.clf()
 
-        #fig = plt_power(1.0,
-        #    dis=[input, lag_out, lag_tgt],
-        #    label=['in', 'out', 'tgt'],
-        #    **args.misc_kwargs,
-        #)
-        #logger.add_figure('fig/train/power/eul', fig, global_step=epoch+1)
-        #fig.clf()
+        fig = plt_power(
+            input, lag_out, lag_tgt, dis=dis,
+            label=['in', 'out', 'tgt'],
+            **args.misc_kwargs,
+        )
+        logger.add_figure('fig/train/power/eul', fig, global_step=epoch+1)
+        fig.clf()
 
     return epoch_loss
 
@@ -353,16 +366,18 @@ def validate(epoch, loader, model, criterion, logger, device, args):
             style = style.to(device, non_blocking=True)
             input = input.to(device, non_blocking=True)
             target = target.to(device, non_blocking=True)
+            input, dis = torch.split(input, 3, dim=1)
 
             output = model(input, style)
 
             if (hasattr(model.module, 'scale_factor')
                     and model.module.scale_factor != 1):
                 input = resample(input, model.module.scale_factor, narrow=False)
-            input, output, target = narrow_cast(input, output, target)
+            input, output, target, dis = narrow_cast(input, output, target, dis)
 
             lag_out, lag_tgt = output, target
-            eul_out, eul_tgt = lag2eul([lag_out, lag_tgt], **args.misc_kwargs)
+            eul_out, eul_tgt = lag2eul(dis, val=[lag_out, lag_tgt],
+                                       **args.misc_kwargs)
 
             lag_loss = criterion(lag_out, lag_tgt)
             eul_loss = criterion(eul_out, eul_tgt)
@@ -378,7 +393,7 @@ def validate(epoch, loader, model, criterion, logger, device, args):
                           global_step=epoch+1)
         logger.add_scalar('loss/epoch/val/eul', epoch_loss[1],
                           global_step=epoch+1)
-        logger.add_scalar('loss/epoch/val/lxe', epoch_loss[2],
+        logger.add_scalar('loss/epoch/val/lxe', epoch_loss[0] * epoch_loss[1],
                           global_step=epoch+1)
 
         fig = plt_slices(
@@ -396,13 +411,13 @@ def validate(epoch, loader, model, criterion, logger, device, args):
         logger.add_figure('fig/val/power/lag', fig, global_step=epoch+1)
         fig.clf()
 
-        #fig = plt_power(1.0,
-        #    dis=[input, lag_out, lag_tgt],
-        #    label=['in', 'out', 'tgt'],
-        #    **args.misc_kwargs,
-        #)
-        #logger.add_figure('fig/val/power/eul', fig, global_step=epoch+1)
-        #fig.clf()
+        fig = plt_power(
+            input, lag_out, lag_tgt, dis=dis,
+            label=['in', 'out', 'tgt'],
+            **args.misc_kwargs,
+        )
+        logger.add_figure('fig/val/power/eul', fig, global_step=epoch+1)
+        fig.clf()
 
     return epoch_loss
 

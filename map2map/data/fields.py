@@ -65,7 +65,8 @@ class FieldDataset(Dataset):
             raise FileNotFoundError('file not found for {}'.format(in_patterns))
         self.is_read_once = np.full(self.nfile, False)
 
-        self.style_size = np.loadtxt(self.style_files[0]).shape[0]
+        self.style_col = [0, 2]
+        self.style_size = np.loadtxt(self.style_files[0])[self.style_col].shape[0]
         self.in_chan = [np.load(f, mmap_mode='r').shape[0]
                         for f in self.in_files[0]]
         self.tgt_chan = [np.load(f, mmap_mode='r').shape[0]
@@ -163,7 +164,7 @@ class FieldDataset(Dataset):
             mmap_mode = None
             self.is_read_once[ifile] = True
 
-        style = np.loadtxt(self.style_files[ifile])
+        style = np.loadtxt(self.style_files[ifile])[self.style_col]
         in_fields = [np.load(f, mmap_mode=mmap_mode)
                      for f in self.in_files[ifile]]
         tgt_fields = [np.load(f, mmap_mode=mmap_mode)
@@ -198,6 +199,10 @@ class FieldDataset(Dataset):
                      for f in in_fields]
         tgt_fields = [torch.from_numpy(f.astype(np.float32))
                       for f in tgt_fields]
+
+        # HACK
+        style -= torch.tensor([0.3, 0.7])
+        style *= torch.tensor([5.0, 5.0])
 
         if self.in_norms is not None:
             for norm, x in zip(self.in_norms, in_fields):
