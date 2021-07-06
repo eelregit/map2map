@@ -5,6 +5,7 @@ from pprint import pprint
 import numpy as np
 import torch
 from torch.utils.data import DataLoader
+from torch.autograd.functional import jvp
 
 from .data import FieldDataset
 from .data import norms
@@ -84,7 +85,9 @@ def test(args):
 
     model.eval()
 
-    with torch.no_grad():
+    v = None
+
+    with torch.enable_grad():
         for i, data in enumerate(test_loader):
             style, input, target = data['style'], data['input'], data['target']
 
@@ -92,15 +95,20 @@ def test(args):
             input = input.to(device, non_blocking=True)
             target = target.to(device, non_blocking=True)
 
-            output = model(input, style)
+            if v is None:
+                v = (torch.zeros_like(input), torch.zeros_like(style))
+                v[1][0] = 1.  #  Om Ob h ns sigma8
+
+            output, output_grad = jvp(model, (input, style), v=v)
             if i < 5:
                 print('##### sample :', i)
                 print('style shape :', style.shape)
                 print('input shape :', input.shape)
                 print('output shape :', output.shape)
+                print('output grad shape :', output_grad.shape)
                 print('target shape :', target.shape)
 
-            input, output, target = narrow_cast(input, output, target)
+            input, output, output_grad, target = narrow_cast(input, output, output_grad, target)
             if i < 5:
                 print('narrowed shape :', output.shape, flush=True)
 
@@ -119,12 +127,15 @@ def test(args):
                 for norm, stop in zip(test_dataset.tgt_norms, np.cumsum(out_chan)):
                     norm = import_attr(norm, norms, callback_at=args.callback_at)
                     norm(output[:, start:stop], undo=True, **args.misc_kwargs)
+                    norm(output_grad[:, start:stop], undo=True, **args.misc_kwargs)  # HACK: NOTE this only works for multiplicative norm functions
                     #norm(target[:, start:stop], undo=True, **args.misc_kwargs)
                     start = stop
 
             #test_dataset.assemble('_in', in_chan, input,
             #                      data['input_relpath'])
             test_dataset.assemble('_out', out_chan, output,
+                                  data['target_relpath'])
+            test_dataset.assemble('_out_grad', out_chan, output_grad,
                                   data['target_relpath'])
             #test_dataset.assemble('_tgt', out_chan, target,
             #                      data['target_relpath'])
