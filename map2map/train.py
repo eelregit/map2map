@@ -264,6 +264,7 @@ def train(epoch, loader, model, criterion,
 
         lag_out, lag_tgt = output, target
         eul_out, eul_tgt = lag2eul([lag_out, lag_tgt], **args.misc_kwargs)
+        #eul_out, eul_tgt = lag2eul([lag_out+input, lag_tgt+input], **args.misc_kwargs) #----for bypass=False
         if batch <= 5 and rank == 0:
             print('Eulerian shape :', eul_out.shape, flush=True)
 
@@ -357,6 +358,7 @@ def validate(epoch, loader, model, criterion, logger, device, args):
 
             lag_out, lag_tgt = output, target
             eul_out, eul_tgt = lag2eul([lag_out, lag_tgt], **args.misc_kwargs)
+            #eul_out, eul_tgt = lag2eul([lag_out+input, lag_tgt+input], **args.misc_kwargs) #----for bypass=False
 
             lag_loss = criterion(lag_out, lag_tgt)
             eul_loss = criterion(eul_out, eul_tgt)
