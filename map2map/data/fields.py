@@ -258,17 +258,21 @@ class FieldDataset(Dataset):
         if isinstance(patches, torch.Tensor):
             patches = patches.detach().cpu().numpy()
 
-        assert patches.ndim == 2 + self.ndim, 'ndim mismatch'
+        assert (patches.ndim == 2 + self.ndim,
+                f'ndim mismatch: {patches.ndim, 2 + self.ndim}')
         if any(self.crop_step > patches.shape[2:]):
             raise RuntimeError('patch too small to tile')
 
         # the batched paths are a list of lists with shape (channel, batch)
         # since pytorch default_collate batches list of strings transposedly
         # therefore we transpose below back to (batch, channel)
-        assert patches.shape[1] == sum(chan), 'number of channels mismatch'
-        assert len(paths) == len(chan), 'number of fields mismatch'
+        assert (patches.shape[1] == sum(chan),
+                f'number of channels mismatch: {patches.shape[1], sum(chan)}')
+        assert (len(paths) == len(chan),
+                f'number of fields mismatch: {len(paths), len(chan)}')
         paths = list(zip(* paths))
-        assert patches.shape[0] == len(paths), 'batch size mismatch'
+        assert (patches.shape[0] == len(paths),
+                f'batch size mismatch: {patches.shape[0], len(paths)}')
 
         patches = list(patches)
         if label in self.assembly_line:
@@ -308,7 +312,8 @@ class FieldDataset(Dataset):
 
 def fill(field, patch, anchor):
     ndim = len(anchor)
-    assert field.ndim == patch.ndim == 1 + ndim, 'ndim mismatch'
+    assert (field.ndim == patch.ndim == 1 + ndim,
+            f'ndim mismatch: {field.ndim, patch.ndim, 1 + ndim}')
 
     ind = [slice(None)]
     for d, (p, a, s) in enumerate(zip(
@@ -323,10 +328,12 @@ def fill(field, patch, anchor):
 
 
 def crop(fields, anchor, crop, pad):
-    assert all(x.shape == fields[0].shape for x in fields), 'shape mismatch'
+    assert (all(x.shape[1:] == fields[0].shape[1:] for x in fields),
+            f'shape mismatch: {[x.shape[1:] for x in fields]}')
     size = fields[0].shape[1:]
     ndim = len(size)
-    assert ndim == len(anchor) == len(crop) == len(pad), 'ndim mismatch'
+    assert (ndim == len(anchor) == len(crop) == len(pad),
+            f'ndim mismatch: {ndim, len(anchor), len(crop), len(pad)}')
 
     ind = [slice(None)]
     for d, (a, c, (p0, p1), s) in enumerate(zip(anchor, crop, pad, size)):
