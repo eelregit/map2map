@@ -189,8 +189,10 @@ class FieldDataset(Dataset):
              self.crop[argsort_perm_axes] * self.scale_factor,
              self.tgt_pad[argsort_perm_axes])
 
-        in_fields = [torch.from_numpy(f).to(torch.float32) for f in in_fields]
-        tgt_fields = [torch.from_numpy(f).to(torch.float32) for f in tgt_fields]
+        in_fields = [torch.from_numpy(f.astype(np.float32))
+                     for f in in_fields]
+        tgt_fields = [torch.from_numpy(f.astype(np.float32))
+                      for f in tgt_fields]
 
         if self.in_norms is not None:
             for norm, x in zip(self.in_norms, in_fields):
