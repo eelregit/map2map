@@ -43,12 +43,13 @@ class FieldDataset(Dataset):
     the input for super-resolution, in which case `crop` and `pad` are sizes of
     the input resolution.
     """
-    def __init__(self, in_patterns, tgt_patterns,
+    def __init__(self, in_patterns, tgt_patterns, style_pattern=None,
                  in_norms=None, tgt_norms=None, callback_at=None,
                  augment=False, aug_shift=None, aug_add=None, aug_mul=None,
                  crop=None, crop_start=None, crop_stop=None, crop_step=None,
                  in_pad=0, tgt_pad=0, scale_factor=1,
                  **kwargs):
+
         in_file_lists = [sorted(glob(p)) for p in in_patterns]
         self.in_files = list(zip(* in_file_lists))
 
@@ -71,6 +72,14 @@ class FieldDataset(Dataset):
         self.size = np.load(self.in_files[0][0], mmap_mode='r').shape[1:]
         self.size = np.asarray(self.size)
         self.ndim = len(self.size)
+
+        self.style = style_pattern is not None
+        self.style_size = 0
+        if self.style:
+            self.style_files = sorted(glob(style_pattern))
+            if len(self.style_files) != len(self.in_files):
+                raise ValueError('number of style and input files do not match')
+            self.style_size = np.loadtxt(self.style_files[0]).shape[0]
 
         if in_norms is not None and len(in_patterns) != len(in_norms):
             raise ValueError('numbers of input normalization functions and fields do not match')
@@ -194,6 +203,11 @@ class FieldDataset(Dataset):
         tgt_fields = [torch.from_numpy(f.astype(np.float32))
                       for f in tgt_fields]
 
+        style = torch.empty(0, dtype=torch.float32)
+        if self.style:
+            style = np.loadtxt(self.style_files[ifile])
+            style = torch.from_numpy(style.astype(np.float32))
+
         if self.in_norms is not None:
             for norm, x in zip(self.in_norms, in_fields):
                 norm = import_attr(norm, norms, callback_at=self.callback_at)
@@ -229,6 +243,7 @@ class FieldDataset(Dataset):
         return {
             'input': in_fields,
             'target': tgt_fields,
+            'style': style,
             #'input_relpath': in_relpath,
             'target_relpath': tgt_relpath,
         }

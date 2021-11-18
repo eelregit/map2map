@@ -66,6 +66,7 @@ def gpu_worker(local_rank, node, args):
     train_dataset = FieldDataset(
         in_patterns=args.train_in_patterns,
         tgt_patterns=args.train_tgt_patterns,
+        style_pattern=args.train_style_pattern,
         in_norms=args.in_norms,
         tgt_norms=args.tgt_norms,
         callback_at=args.callback_at,
@@ -98,6 +99,7 @@ def gpu_worker(local_rank, node, args):
         val_dataset = FieldDataset(
             in_patterns=args.val_in_patterns,
             tgt_patterns=args.val_tgt_patterns,
+            style_pattern=args.val_style_pattern,
             in_norms=args.in_norms,
             tgt_norms=args.tgt_norms,
             callback_at=args.callback_at,
@@ -126,10 +128,12 @@ def gpu_worker(local_rank, node, args):
             pin_memory=True,
         )
 
-    args.in_chan, args.out_chan = train_dataset.in_chan, train_dataset.tgt_chan
+    args.in_chan = train_dataset.in_chan
+    args.out_chan = train_dataset.tgt_chan
+    args.style_size = train_dataset.style_size
 
     model = import_attr(args.model, models, callback_at=args.callback_at)
-    model = model(sum(args.in_chan), sum(args.out_chan),
+    model = model(sum(args.in_chan), sum(args.out_chan), style_size=style_size,
                   scale_factor=args.scale_factor, **args.misc_kwargs)
     model.to(device)
     model = DistributedDataParallel(model, device_ids=[device],
@@ -157,6 +161,7 @@ def gpu_worker(local_rank, node, args):
             sum(args.in_chan + args.out_chan) if args.cgan
                 else sum(args.out_chan),
             1,
+            style_size=style_size,
             scale_factor=args.scale_factor,
             **args.misc_kwargs,
         )
@@ -330,17 +335,19 @@ def train(epoch, loader, model, criterion, optimizer, scheduler,
     for i, data in enumerate(loader):
         batch = epoch * len(loader) + i + 1
 
-        input, target = data['input'], data['target']
+        input, target, style = data['input'], data['target'], data['style']
 
         input = input.to(device, non_blocking=True)
         target = target.to(device, non_blocking=True)
+        style = style.to(device, non_blocking=True)
 
-        output = model(input)
+        output = model(input, style=style)
         if batch <= 5 and rank == 0:
             print('##### batch :', batch)
             print('input shape :', input.shape)
             print('output shape :', output.shape)
             print('target shape :', target.shape)
+            print('style shape :', style.shape)
 
         if (hasattr(model.module, 'scale_factor')
                 and model.module.scale_factor != 1):
@@ -368,14 +375,14 @@ def train(epoch, loader, model, criterion, optimizer, scheduler,
             # discriminator
             set_requires_grad(adv_model, True)
 
-            score_out = adv_model(output.detach())
+            score_out = adv_model(output.detach(), style=style)
             adv_loss_fake = adv_criterion(score_out, fake.expand_as(score_out))
             epoch_loss[3] += adv_loss_fake.detach()
 
             adv_optimizer.zero_grad()
             adv_loss_fake.backward()
 
-            score_tgt = adv_model(target)
+            score_tgt = adv_model(target, style=style)
             adv_loss_real = adv_criterion(score_tgt, adv_real.expand_as(score_tgt))
             epoch_loss[4] += adv_loss_real.detach()
 
@@ -386,7 +393,7 @@ def train(epoch, loader, model, criterion, optimizer, scheduler,
 
             if (args.adv_wgan_gp_interval > 0
                 and  batch % args.adv_wgan_gp_interval == 0):
-                adv_loss_reg = wgan_grad_penalty(adv_model, output, target)
+                adv_loss_reg = wgan_grad_penalty(adv_model, output, target, style=style)
                 adv_loss_reg_ = adv_loss_reg * args.adv_wgan_gp_interval
 
                 adv_loss_reg_.backward()
@@ -405,7 +412,7 @@ def train(epoch, loader, model, criterion, optimizer, scheduler,
             if batch % args.adv_iter_ratio == 0:
                 set_requires_grad(adv_model, False)
 
-                score_out = adv_model(output)
+                score_out = adv_model(output, style=style)
                 loss_adv = adv_criterion(score_out, real.expand_as(score_out))
                 epoch_loss[1] += args.adv_iter_ratio * loss_adv.detach()
 
@@ -468,13 +475,13 @@ def train(epoch, loader, model, criterion, optimizer, scheduler,
                 global_step=epoch+1,
             )
 
-        skip_chan = 0
         if args.adv and epoch >= args.adv_start and args.cgan:
             skip_chan = sum(args.in_chan)
+            output = output[:, skip_chan:]
+            target = target[:, skip_chan:]
 
         fig = plt_slices(
-            input[-1], output[-1, skip_chan:], target[-1, skip_chan:],
-            output[-1, skip_chan:] - target[-1, skip_chan:],
+            input[-1], output[-1], target[-1], output[-1] - target[-1],
             title=['in', 'out', 'tgt', 'out - tgt'],
             **args.misc_kwargs,
         )
@@ -482,7 +489,7 @@ def train(epoch, loader, model, criterion, optimizer, scheduler,
         fig.clf()
 
         fig = plt_power(
-            input, output[:, skip_chan:], target[:, skip_chan:],
+            input, output, target,
             label=['in', 'out', 'tgt'],
             **args.misc_kwargs,
         )
@@ -490,7 +497,7 @@ def train(epoch, loader, model, criterion, optimizer, scheduler,
         fig.clf()
 
         #fig = plt_power(1.0,
-        #    dis=[input, output[:, skip_chan:], target[:, skip_chan:]],
+        #    dis=[input, output, target],
         #    label=['in', 'out', 'tgt'],
         #    **args.misc_kwargs,
         #)
@@ -515,12 +522,13 @@ def validate(epoch, loader, model, criterion, adv_model, adv_criterion,
 
     with torch.no_grad():
         for data in loader:
-            input, target = data['input'], data['target']
+            input, target, style = data['input'], data['target'], data['style']
 
             input = input.to(device, non_blocking=True)
             target = target.to(device, non_blocking=True)
+            style = style.to(device, non_blocking=True)
 
-            output = model(input)
+            output = model(input, style=style)
 
             if (hasattr(model.module, 'scale_factor')
                     and model.module.scale_factor != 1):
@@ -536,11 +544,11 @@ def validate(epoch, loader, model, criterion, adv_model, adv_criterion,
                     target = torch.cat([input, target], dim=1)
 
                 # discriminator
-                score_out = adv_model(output)
+                score_out = adv_model(output, style=style)
                 adv_loss_fake = adv_criterion(score_out, fake.expand_as(score_out))
                 epoch_loss[3] += adv_loss_fake.detach()
 
-                score_tgt = adv_model(target)
+                score_tgt = adv_model(target, style=style)
                 adv_loss_real = adv_criterion(score_tgt, real.expand_as(score_tgt))
                 epoch_loss[4] += adv_loss_real.detach()
 
@@ -569,13 +577,13 @@ def validate(epoch, loader, model, criterion, adv_model, adv_criterion,
                 global_step=epoch+1,
             )
 
-        skip_chan = 0
         if args.adv and epoch >= args.adv_start and args.cgan:
             skip_chan = sum(args.in_chan)
+            output = output[:, skip_chan:]
+            target = target[:, skip_chan:]
 
         fig = plt_slices(
-            input[-1], output[-1, skip_chan:], target[-1, skip_chan:],
-            output[-1, skip_chan:] - target[-1, skip_chan:],
+            input[-1], output[-1], target[-1], output[-1] - target[-1],
             title=['in', 'out', 'tgt', 'out - tgt'],
             **args.misc_kwargs,
         )
@@ -583,7 +591,7 @@ def validate(epoch, loader, model, criterion, adv_model, adv_criterion,
         fig.clf()
 
         fig = plt_power(
-            input, output[:, skip_chan:], target[:, skip_chan:],
+            input, output, target,
             label=['in', 'out', 'tgt'],
             **args.misc_kwargs,
         )
@@ -591,7 +599,7 @@ def validate(epoch, loader, model, criterion, adv_model, adv_criterion,
         fig.clf()
 
         #fig = plt_power(1.0,
-        #    dis=[input, output[:, skip_chan:], target[:, skip_chan:]],
+        #    dis=[input, output, target],
         #    label=['in', 'out', 'tgt'],
         #    **args.misc_kwargs,
         #)

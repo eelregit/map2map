@@ -122,7 +122,7 @@ class Net(nn.Module):
         self.act = nn.LeakyReLU(negative_slope)
         self.conv2 = nn.Conv2d(mid_chan, out_chan, kernel_size)
 
-    def forward(self, x):
+    def forward(self, x, *args, **kwargs):
         x = self.conv1(x)
         x = self.act(x)
         x = self.conv2(x)

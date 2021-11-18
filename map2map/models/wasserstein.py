@@ -20,7 +20,7 @@ def wasserstein_distance_loss(input, target):
     return - (sign * input).mean()
 
 
-def wgan_grad_penalty(critic, x, y, lam=10):
+def wgan_grad_penalty(critic, x, y, lam=10, *args, **kwargs):
     """Calculate the gradient penalty for WGAN
     """
     device = x.device
@@ -30,7 +30,7 @@ def wgan_grad_penalty(critic, x, y, lam=10):
 
     xy = alpha * x.detach() + (1 - alpha) * y.detach()
 
-    score = critic(xy.requires_grad_(True))
+    score = critic(xy.requires_grad_(True), *args, **kwargs)
     # average over spatial dimensions if present
     score = score.flatten(start_dim=1).mean(dim=1)
     # sum over batches because graphs are mostly independent (w/o batchnorm)

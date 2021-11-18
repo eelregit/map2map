@@ -37,6 +37,7 @@ def test(args):
     test_dataset = FieldDataset(
         in_patterns=args.test_in_patterns,
         tgt_patterns=args.test_tgt_patterns,
+        style_pattern=args.test_style_pattern,
         in_norms=args.in_norms,
         tgt_norms=args.tgt_norms,
         callback_at=args.callback_at,
@@ -61,10 +62,12 @@ def test(args):
         pin_memory=True,
     )
 
-    in_chan, out_chan = test_dataset.in_chan, test_dataset.tgt_chan
+    in_chan = test_dataset.in_chan
+    out_chan = test_dataset.tgt_chan
+    style_size = test_dataset.style_size
 
     model = import_attr(args.model, models, callback_at=args.callback_at)
-    model = model(sum(in_chan), sum(out_chan),
+    model = model(sum(in_chan), sum(out_chan), style_size=style_size,
                   scale_factor=args.scale_factor, **args.misc_kwargs)
     model.to(device)
 
@@ -83,17 +86,19 @@ def test(args):
 
     with torch.no_grad():
         for i, data in enumerate(test_loader):
-            input, target = data['input'], data['target']
+            input, target, style = data['input'], data['target'], data['style']
 
             input = input.to(device, non_blocking=True)
             target = target.to(device, non_blocking=True)
+            style = style.to(device, non_blocking=True)
 
-            output = model(input)
+            output = model(input, style=style)
             if i < 5:
                 print('##### sample :', i)
                 print('input shape :', input.shape)
                 print('output shape :', output.shape)
                 print('target shape :', target.shape)
+                print('style shape :', style.shape)
 
             input, output, target = narrow_cast(input, output, target)
             if i < 5:

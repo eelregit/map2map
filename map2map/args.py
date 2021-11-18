@@ -102,10 +102,14 @@ def add_train_args(parser):
             help='comma-sep. list of glob patterns for training input data')
     parser.add_argument('--train-tgt-patterns', type=str_list, required=True,
             help='comma-sep. list of glob patterns for training target data')
+    parser.add_argument('--train-style-pattern', type=str,
+            help='glob pattern for training data styles')
     parser.add_argument('--val-in-patterns', type=str_list,
             help='comma-sep. list of glob patterns for validation input data')
     parser.add_argument('--val-tgt-patterns', type=str_list,
             help='comma-sep. list of glob patterns for validation target data')
+    parser.add_argument('--val-style-pattern', type=str,
+            help='glob pattern for validation data styles')
     parser.add_argument('--augment', action='store_true',
             help='enable data augmentation of axis flipping and permutation')
     parser.add_argument('--aug-shift', type=int_tuple,
@@ -194,6 +198,8 @@ def add_test_args(parser):
             help='comma-sep. list of glob patterns for test input data')
     parser.add_argument('--test-tgt-patterns', type=str_list, required=True,
             help='comma-sep. list of glob patterns for test target data')
+    parser.add_argument('--test-style-pattern', type=str,
+            help='glob pattern for test data styles')
 
     parser.add_argument('--num-threads', type=int,
             help='number of CPU threads when cuda is unavailable. '
