@@ -4,13 +4,16 @@ import torch.nn as nn
 
 from .narrow import narrow_by
 from .resample import Resampler
-from .style import ConvStyled3d, BatchNormStyled3d, LeakyReLUStyled
+from .style import ConvStyled3d, LeakyReLUStyled
 from .styled_conv import ResStyledBlock
+
+
 class G(nn.Module):
     def __init__(self, in_chan, out_chan, style_size, scale_factor=16,
                  chan_base=512, chan_min=64, chan_max=512, cat_noise=False,
                  **kwargs):
         super().__init__()
+
         self.style_size = style_size
         self.scale_factor = scale_factor
         num_blocks = round(log2(self.scale_factor))
@@ -24,13 +27,13 @@ class G(nn.Module):
             return c
 
         self.block0 = nn.Sequential(
-            ConvStyled3d(in_chan, chan(0), style_size=self.style_size ,1),
+            ConvStyled3d(in_chan, chan(0), style_size=self.style_size, 1),
             LeakyReLUStyled(0.2, True),
         )
 
         self.blocks = nn.ModuleList()
         for b in range(num_blocks):
-            prev_chan, next_chan = chan(b), chan(b + 1)
+            prev_chan, next_chan = chan(b), chan(b+1)
             self.blocks.append(
                 HBlock(prev_chan, next_chan, out_chan, cat_noise))
 
@@ -43,9 +46,6 @@ class G(nn.Module):
             x, y = block(x, y)
 
         return y
-
-
-
 
 
 class HBlock(nn.Module):
@@ -145,9 +145,9 @@ class D(nn.Module):
                  **kwargs):
         super().__init__()
 
+        self.style_size = style_size
         self.scale_factor = scale_factor
         num_blocks = round(log2(self.scale_factor))
-        self.style_size = style_size
 
         assert chan_min <= chan_max
 
@@ -161,7 +161,7 @@ class D(nn.Module):
             return c
 
         self.block0 = nn.Sequential(
-            ConvStyled3d(in_chan, chan(num_blocks),style_size= self.style_size ,1),
+            ConvStyled3d(in_chan, chan(num_blocks), style_size=self.style_size, 1),
             LeakyReLUStyled(0.2, True),
         )
 
@@ -169,12 +169,14 @@ class D(nn.Module):
         for b in reversed(range(num_blocks)):
             prev_chan, next_chan = chan(b+1), chan(b)
             self.blocks.append(ResStyledBlock(in_chan=prev_chan, out_chan=next_chan, seq='CACA', last_act=False))
-            self.blocks.append(Resampler(3, 0.5))
+
+        self.downsample = Resampler(3, 0.5)
+
 
         self.block9 = nn.Sequential(
-            ConvStyled3d(chan(0), chan(-1),style_size = self.style_size, 1),
+            ConvStyled3d(chan(0), chan(-1), style_size=self.style_size, 1),
             LeakyReLUStyled(0.2, True),
-            ConvStyled3d(chan(-1), 1,style_size=self.style_size, 1),
+            ConvStyled3d(chan(-1), 1, style_size=self.style_size, 1),
         )
 
     def forward(self, x, style=s):
@@ -182,9 +184,8 @@ class D(nn.Module):
 
         for block in self.blocks:
             x = block(x, s)
+            x = self.downsample(x)
 
         x = self.block9(x, s)
 
         return x
-
-
