@@ -171,9 +171,11 @@ class BatchNormStyled3d(nn.BatchNorm3d) :
         return super().forward(x)
 
 class LeakyReLUStyled(nn.LeakyReLU):
+    def __init__(self, negative_slope, inplace):
+        super().__init__(negative_slope, inplace)
     """ Trivially evaluates standard leaky ReLU, but accepts second argument
 
-    for sytle array that is not used
+    for style array that is not used
     """
     def forward(self, x, style=s):
         return super().forward(x)
