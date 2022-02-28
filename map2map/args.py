@@ -21,9 +21,15 @@ def get_args():
         'test',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
+    generate_parser = subparsers.add_parser(
+        'generate',
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    )
+
 
     add_train_args(train_parser)
     add_test_args(test_parser)
+    add_generate_args(generate_parser)
 
     args = parser.parse_args()
 
@@ -31,6 +37,8 @@ def get_args():
         set_train_args(args)
     elif args.mode == 'test':
         set_test_args(args)
+    elif args.mode == 'generate':
+        set_generate_args(args)
 
     return args
 
@@ -177,6 +185,24 @@ def add_test_args(parser):
             help='number of CPU threads when cuda is unavailable. '
             'Default is the number of CPUs on the node by slurm')
 
+def add_generate_args(parser):
+    add_common_args(parser)
+    parser.add_argument('--num_mesh_1d', type=int, required=True,
+            help='Number of particles output is num_mesh_1d**3')
+    parser.add_argument('--power_spectrum', type=str, required=True,
+            help='glob pattern for power spectra')
+    parser.add_argument('--gen-style-pattern', type=str, required=True,
+            help='glob pattern for styles')
+    parser.add_argument('--out_dir', type=str, required=True,
+            help='glob pattern for output directories')
+    parser.add_argument('--redshift', type=str,
+            default=0.0, help='redshift of power spectrum')
+
+    parser.add_argument('--num-threads', type=int,
+            help='number of CPU threads when cuda is unavailable. '
+            'Default is the number of CPUs on the node by slurm')
+    parser.add_argument('--seed', default=None, type=int,
+            help='seed for random realization')
 
 def str_list(s):
     return s.split(',')
@@ -201,6 +227,8 @@ def set_train_args(args):
     args.val = args.val_in_patterns is not None and \
             args.val_tgt_patterns is not None
 
-
 def set_test_args(args):
+    set_common_args(args)
+
+def set_generate_args(args):
     set_common_args(args)
