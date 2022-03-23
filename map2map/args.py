@@ -186,7 +186,6 @@ def add_test_args(parser):
             'Default is the number of CPUs on the node by slurm')
 
 def add_generate_args(parser):
-    add_common_args(parser)
     parser.add_argument('--num_mesh_1d', type=int, required=True,
             help='Number of particles output is num_mesh_1d**3')
     parser.add_argument('--power_spectrum', type=str, required=True,
@@ -197,12 +196,55 @@ def add_generate_args(parser):
             help='glob pattern for output directories')
     parser.add_argument('--redshift', type=str,
             default=0.0, help='redshift of power spectrum')
+    parser.add_argument('--seed', default=None, type=int,
+            help='seed for random realization')
+    parser.add_argument('--no_dis', action="store_true",
+            help='Flag to generate displacements')
+    parser.add_argument('--no_vel', action="store_true",
+            help='Flag to generate velocities')
+    parser.add_argument('--verbose', action="store_true",
+            help='Flag to print more output')
 
+    # Copied from common arguments, some defaults don't make sense for generating form the default models
+    parser.add_argument('--in-norms', type=str_list, help='comma-sep. list '
+            'of input normalization functions')
+    parser.add_argument('--crop', type=int_tuple,
+            help='size to crop the input and target data. Default is the '
+            'field size. Comma-sep. list of 1 or d integers')
+    parser.add_argument('--crop-start', type=int_tuple,
+            help='starting point of the first crop. Default is the origin. '
+            'Comma-sep. list of 1 or d integers')
+    parser.add_argument('--crop-stop', type=int_tuple,
+            help='stopping point of the last crop. Default is the opposite '
+            'corner to the origin. Comma-sep. list of 1 or d integers')
+    parser.add_argument('--crop-step', type=int_tuple,
+            help='spacing between crops. Default is the crop size. '
+            'Comma-sep. list of 1 or d integers')
+    parser.add_argument('--in-pad', '--pad', default=0, type=int_tuple,
+            help='size to pad the input data beyond the crop size, assuming '
+            'periodic boundary condition. Comma-sep. list of 1, d, or dx2 '
+            'integers, to pad equally along all axes, symmetrically on each, '
+            'or by the specified size on every boundary, respectively')
+    parser.add_argument('--scale-factor', default=1, type=int,
+            help='upsampling factor for super-resolution, in which case '
+            'crop and pad are sizes of the input resolution')
+    parser.add_argument('--batch-size', '--batches', type=int, required=True,
+            help='mini-batch size, per GPU in training or in total in testing')
+    parser.add_argument('--loader-workers', default=8, type=int,
+            help='number of subprocesses per data loader. '
+            '0 to disable multiprocessing')
+    parser.add_argument('--callback-at', type=lambda s: os.path.abspath(s),
+            help='directory of custorm code defining callbacks for models, '
+            'norms, criteria, and optimizers. Disabled if not set. '
+            'This is appended to the default locations, '
+            'thus has the lowest priority')
+    parser.add_argument('--misc-kwargs', default='{}', type=json.loads,
+            help='miscellaneous keyword arguments for custom models and '
+            'norms. Be careful with name collisions')
     parser.add_argument('--num-threads', type=int,
             help='number of CPU threads when cuda is unavailable. '
             'Default is the number of CPUs on the node by slurm')
-    parser.add_argument('--seed', default=None, type=int,
-            help='seed for random realization')
+
 
 def str_list(s):
     return s.split(',')
@@ -216,10 +258,8 @@ def int_tuple(s):
     else:
         return t
 
-
 def set_common_args(args):
     pass
-
 
 def set_train_args(args):
     set_common_args(args)
